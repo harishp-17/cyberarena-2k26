@@ -1,0 +1,2350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CyberArena — The Ultimate Digital Trust Challenge</title>
+<!-- Google Fonts: Inter & Orbitron for Cyber Aesthetics -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   CYBERARENA — DESIGN SYSTEM (Landing Page UI)
+   Color:  bg #080c14 · card #0d1527 · border #1e293b
+           neon cyan #38bdf8 · neon green #22c55e
+           neon magenta #e056fd · neon purple #a855f7
+           rose #fb4570 (violation) · amber #f2b23b (gold)
+   Type:   Orbitron (display, buttons, numbers) · Inter (body)
+           system mono (labels, data, code)
+   Style:  glassmorphism cards, neon glows, particle canvas,
+           cyber grid + scanline overlays
+   ============================================================ */
+:root{
+  --obsidian:#080c14;
+  --card:#0d1527;
+  --panel:rgba(13,21,39,0.75);
+  --panel-2:rgba(13,21,39,0.9);
+  --line:rgba(56,189,248,0.2);
+  --border:#1e293b;
+  --cyan:#38bdf8;
+  --cyan-dim:rgba(56,189,248,0.5);
+  --green:#22c55e;
+  --magenta:#e056fd;
+  --purple:#a855f7;
+  --rose:#fb4570;
+  --amber:#f2b23b;
+  --ink:#f8fafc;
+  --ink-dim:#94a3b8;
+  --radius:12px;
+  --radius-sm:8px;
+  --font-display:'Orbitron', sans-serif;
+  --font-body:'Inter', sans-serif;
+  --font-mono:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html{height:100%;}
+body{
+  margin:0;
+  background-color:var(--obsidian);
+  color:var(--ink);
+  font-family:var(--font-body);
+  min-height:100vh;
+  display:flex; flex-direction:column;
+  overflow-x:hidden;
+  user-select:none;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.display{ font-family:var(--font-display); letter-spacing:0.01em; }
+::selection{ background:transparent; }
+a{ color:var(--cyan); }
+
+/* ---------- background layers: particle canvas, grid, scanline ---------- */
+#cyberCanvas{ position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0; }
+.cyber-grid{
+  position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:
+    linear-gradient(to right, rgba(56,189,248,0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(56,189,248,0.05) 1px, transparent 1px);
+  background-size:40px 40px;
+}
+.scanline{
+  position:fixed; inset:0; pointer-events:none; z-index:0; opacity:0.4;
+  background:linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.3));
+  background-size:100% 4px;
+}
+
+
+/* ---------- inline SVG icons (replace icon font) ---------- */
+.ico{ display:inline-flex; align-items:center; justify-content:center; line-height:1; flex-shrink:0; }
+.ico svg{ width:1em; height:1em; display:block; fill:currentColor; }
+
+/* ---------- glass + neon utilities ---------- */
+.glass-card{
+  background:var(--panel);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  border:1px solid var(--line);
+}
+.neon-glow-cyan{ text-shadow:0 0 10px rgba(56,189,248,0.7), 0 0 20px rgba(56,189,248,0.5), 0 0 30px rgba(56,189,248,0.3); }
+.neon-box-cyan{ box-shadow:0 0 15px rgba(56,189,248,0.3), inset 0 0 15px rgba(56,189,248,0.1); }
+
+/* ---------- screens ---------- */
+.screen{ position:relative; z-index:1; display:none; flex-direction:column; flex:1 1 auto; }
+.screen.active{ display:flex; }
+.wrap{ max-width:920px; margin:0 auto; padding:32px 20px; width:100%; flex:1; display:flex; flex-direction:column; }
+
+/* ---------- top header (status bar) ---------- */
+.statusbar{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:16px 24px;
+  background:var(--panel);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(30,41,59,0.8);
+}
+.statusbar .brand-wrap{ display:flex; align-items:center; gap:12px; min-width:0; }
+.statusbar .brand-wrap > i{ color:var(--cyan); font-size:24px; animation:pulse 2s infinite; }
+.statusbar .brand{ font-family:var(--font-display); font-weight:700; font-size:18px; letter-spacing:0.1em; color:#e2e8f0; white-space:nowrap; }
+.statusbar .brand span{ color:var(--cyan); }
+.statusbar .brand-sub{ font-family:var(--font-mono); font-size:11px; color:var(--ink-dim); letter-spacing:0.04em; }
+.status-pill{
+  display:flex; align-items:center; gap:8px;
+  font-family:var(--font-mono); font-size:12px; color:var(--ink-dim);
+  background:rgba(15,23,42,0.8); border:1px solid rgba(51,65,85,0.6);
+  padding:6px 12px; border-radius:999px; min-width:0;
+}
+.status-pill #playerTag{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ping{ position:relative; width:8px; height:8px; border-radius:50%; background:#34d399; flex-shrink:0; }
+.ping::after{ content:""; position:absolute; inset:0; border-radius:50%; background:#34d399; animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite; }
+@keyframes ping{ 75%,100%{ transform:scale(2.4); opacity:0; } }
+@keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.4; } }
+
+/* ---------- landing ---------- */
+.landing-wrap{ max-width:1152px; align-items:center; text-align:center; }
+.landing-hero{ flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:20px 0; width:100%; }
+.dept-presents{
+  display:inline-block;
+  font-family:var(--font-display); font-weight:900;
+  font-size:clamp(24px, 5vw, 48px);
+  color:var(--cyan); letter-spacing:0.12em; text-transform:uppercase;
+  margin:0 0 8px 0;
+  text-shadow:0 0 10px rgba(56,189,248,0.7), 0 0 20px rgba(56,189,248,0.5), 0 0 30px rgba(56,189,248,0.3);
+}
+.dept-presents::after{
+  content:""; display:block; height:4px; width:100%; margin-top:8px;
+  background:linear-gradient(to right, transparent, var(--cyan), transparent);
+}
+
+/* holographic shield */
+@keyframes floatPulse{
+  0%,100%{ transform:translateY(0) scale(1); filter:drop-shadow(0 0 15px rgba(56,189,248,0.6)); }
+  50%{ transform:translateY(-8px) scale(1.03); filter:drop-shadow(0 0 25px rgba(224,86,253,0.8)); }
+}
+.hologram-shield{ position:relative; margin:24px 0; animation:floatPulse 4s infinite ease-in-out; }
+.shield-ring{
+  width:112px; height:112px; border-radius:50%;
+  background:rgba(15,23,42,0.8); border:2px solid rgba(56,189,248,0.6);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 15px rgba(56,189,248,0.3), inset 0 0 15px rgba(56,189,248,0.1);
+}
+.shield-ring i{ font-size:60px; color:var(--cyan); }
+.shield-code{ position:absolute; right:-8px; bottom:-8px; font-size:24px; color:var(--magenta); }
+
+.landing-title{
+  font-size:clamp(30px, 5.6vw, 60px); line-height:1.15; font-weight:900; color:#fff;
+  max-width:896px; margin:0 0 14px 0; letter-spacing:-0.01em;
+}
+.landing-title .accent{ color:var(--cyan); text-shadow:0 0 10px rgba(56,189,248,0.7), 0 0 20px rgba(56,189,248,0.5), 0 0 30px rgba(56,189,248,0.3); }
+.landing-sub{ font-family:var(--font-body); font-size:clamp(14px, 1.6vw, 18px); color:#cbd5e1; max-width:672px; line-height:1.7; margin:0 auto 8px; }
+
+/* stat badges */
+.landing-meta{
+  display:grid; grid-template-columns:repeat(2, 1fr); gap:12px;
+  width:100%; max-width:768px; margin:32px 0;
+}
+@media (min-width:640px){ .landing-meta{ grid-template-columns:repeat(4, 1fr); gap:24px; } }
+.landing-meta div{
+  background:var(--panel); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(51,65,85,0.5); border-radius:var(--radius);
+  padding:14px 12px; text-align:center;
+  font-family:var(--font-mono); font-size:12px; color:var(--ink-dim);
+}
+.landing-meta div b{ display:block; font-family:var(--font-display); font-size:24px; font-weight:700; margin-bottom:4px; color:var(--cyan); }
+.landing-meta div:nth-child(2) b{ color:var(--magenta); }
+.landing-meta div:nth-child(3) b{ color:#34d399; }
+.landing-meta div:nth-child(4) b{ color:#fbbf24; }
+
+/* generic small eyebrow used on non-landing screens */
+.landing-eyebrow{ font-family:var(--font-mono); font-size:12px; color:var(--green); margin-bottom:14px; letter-spacing:0.08em; }
+
+/* ---------- buttons ---------- */
+.btn{
+  font-family:var(--font-display); font-size:13px; font-weight:700; letter-spacing:0.06em;
+  padding:13px 26px; border-radius:var(--radius-sm); border:1px solid var(--cyan);
+  background:rgba(56,189,248,0.08); color:var(--cyan); cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  transition:all .3s ease;
+}
+.btn:hover{ background:rgba(56,189,248,0.18); box-shadow:0 0 25px rgba(56,189,248,0.35); }
+.btn:active{ transform:translateY(1px); }
+.btn.solid{ background:var(--cyan); color:#020617; border-color:var(--cyan); box-shadow:0 0 20px rgba(56,189,248,0.5); }
+.btn.solid:hover{ background:#7dd3fc; box-shadow:0 0 35px rgba(56,189,248,0.8), 0 0 15px rgba(224,86,253,0.6); transform:translateY(-2px) scale(1.02); }
+.btn.hero{
+  padding:18px 40px; font-size:clamp(16px, 2vw, 20px); font-weight:900; text-transform:uppercase; letter-spacing:0.08em;
+  background:linear-gradient(to right, #06b6d4, #0ea5e9, #2563eb); color:#020617; border:none; border-radius:var(--radius);
+  box-shadow:0 0 20px rgba(56,189,248,0.5);
+}
+.btn.hero:hover{ background:linear-gradient(to right, #06b6d4, #0ea5e9, #2563eb); }
+.btn.green{ border-color:var(--green); color:var(--green); background:rgba(34,197,94,0.08); }
+.btn.green:hover{ background:rgba(34,197,94,0.18); box-shadow:0 0 24px rgba(34,197,94,0.3); }
+.btn.rose{ border-color:var(--rose); color:var(--rose); background:rgba(251,69,112,0.08); }
+.btn.rose:hover{ background:rgba(251,69,112,0.18); box-shadow:0 0 24px rgba(251,69,112,0.3); }
+.btn.ghost{ border-color:#334155; color:var(--ink-dim); background:transparent; }
+.btn.ghost:hover{ border-color:var(--cyan-dim); color:var(--cyan); background:rgba(56,189,248,0.06); }
+.btn.small{ padding:9px 16px; font-size:11px; }
+.btn:disabled, .btn:disabled:hover{ opacity:.35; cursor:not-allowed; transform:none; box-shadow:none; }
+
+/* ---------- panels / cards (glassmorphism) ---------- */
+.panel{ background:var(--panel); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border:1px solid var(--line); border-radius:var(--radius); padding:28px; }
+.panel-2{ background:var(--panel-2); backdrop-filter:blur(12px); border:1px solid var(--line); border-radius:var(--radius); padding:22px; }
+
+/* ---------- registration card ---------- */
+.reg-card{ border-color:rgba(56,189,248,0.4); box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); border-radius:16px; padding:32px; }
+.reg-head{ text-align:center; margin-bottom:24px; }
+.reg-head > i{ font-size:30px; color:var(--cyan); margin:0 auto 8px; display:flex; }
+.reg-head .landing-eyebrow{ margin-bottom:6px; }
+.reg-head h2{ margin:4px 0 6px; font-size:24px; font-weight:700; color:#fff; }
+.reg-head p{ margin:0; color:var(--ink-dim); font-size:12px; }
+
+/* ---------- forms ---------- */
+.field{ margin-bottom:20px; }
+.field label{ display:block; font-family:var(--font-mono); font-size:12px; color:#cbd5e1; margin-bottom:6px; letter-spacing:0.04em; }
+.field input, .field select, .field textarea{
+  width:100%; background:rgba(15,23,42,0.9); border:1px solid #334155; color:#fff;
+  padding:12px 14px; border-radius:var(--radius-sm); font-family:var(--font-body); font-size:14px;
+  user-select:text; transition:border-color .2s ease;
+}
+.field input::placeholder{ color:#64748b; }
+.field input:focus, .field select:focus, .field textarea:focus{ outline:none; border-color:var(--cyan); box-shadow:0 0 0 3px rgba(56,189,248,0.12); }
+.input-wrap{ position:relative; }
+.input-wrap > i{ position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#64748b; font-size:14px; pointer-events:none; }
+.input-wrap input, .input-wrap select{ padding-left:40px; }
+
+/* ---------- header for rounds ---------- */
+.round-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:26px; flex-wrap:wrap; gap:14px; }
+.round-head h2{ font-size:24px; margin:0 0 8px; color:#fff; font-weight:700; }
+.round-head .tag{ font-family:var(--font-mono); font-size:11px; color:var(--green); border:1px solid rgba(34,197,94,0.35); padding:4px 10px; border-radius:20px; background:rgba(34,197,94,0.06); }
+.timer{
+  font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--cyan);
+  border:1px solid var(--cyan-dim); padding:8px 18px; border-radius:var(--radius-sm); min-width:120px; text-align:center;
+  background:rgba(56,189,248,0.06);
+  text-shadow:0 0 10px rgba(56,189,248,0.5);
+  box-shadow:0 0 15px rgba(56,189,248,0.2), inset 0 0 15px rgba(56,189,248,0.06);
+}
+.timer.low{ color:var(--rose); border-color:var(--rose); text-shadow:0 0 10px rgba(251,69,112,0.6); animation:pulse 1s infinite; }
+
+/* ---------- progress ---------- */
+.progressbar{ height:4px; background:rgba(30,41,59,0.9); border-radius:2px; overflow:hidden; margin-bottom:24px; }
+.progressbar > div{ height:100%; background:linear-gradient(90deg,var(--cyan),var(--magenta)); box-shadow:0 0 10px rgba(56,189,248,0.6); transition:width .3s ease; }
+
+/* ---------- quiz question ---------- */
+.qcounter{ font-family:var(--font-mono); font-size:12px; color:var(--ink-dim); margin-bottom:10px; }
+.qtext{ font-size:19px; line-height:1.55; margin-bottom:22px; color:#fff; font-weight:500; }
+.options{ display:grid; gap:10px; }
+.option{
+  display:flex; align-items:center; gap:12px; padding:14px 16px; border:1px solid rgba(51,65,85,0.8);
+  border-radius:var(--radius-sm); cursor:pointer; background:rgba(15,23,42,0.6); transition:.2s;
+  font-size:14px; color:#e2e8f0;
+}
+.option:hover{ border-color:var(--cyan-dim); background:rgba(56,189,248,0.06); }
+.option.selected{ border-color:var(--cyan); background:rgba(56,189,248,0.12); box-shadow:0 0 15px rgba(56,189,248,0.2); }
+.option .letter{
+  width:26px; height:26px; border-radius:50%; border:1px solid #475569; display:flex; align-items:center;
+  justify-content:center; font-family:var(--font-mono); font-size:11px; color:var(--ink-dim); flex-shrink:0;
+}
+.option.selected .letter{ border-color:var(--cyan); color:var(--cyan); }
+.round-nav{ display:flex; justify-content:space-between; gap:12px; margin-top:28px; }
+
+/* ---------- arcade ---------- */
+.puzzle-card .ptype{ font-family:var(--font-mono); font-size:11px; color:var(--green); margin-bottom:8px; letter-spacing:0.08em; }
+.puzzle-card .pbody{ font-size:15px; line-height:1.65; margin-bottom:16px; color:#e2e8f0; }
+.mono-box{ background:rgba(2,6,23,0.75); border:1px solid rgba(56,189,248,0.25); border-radius:var(--radius-sm); padding:14px; font-family:var(--font-mono); font-size:14px; letter-spacing:0.04em; margin-bottom:14px; user-select:text; color:#e2e8f0; }
+
+/* ---------- waiting room ---------- */
+.wait-banner{ text-align:center; padding:14px; border:1px solid var(--green); border-radius:var(--radius); background:rgba(6,20,14,0.9); margin-bottom:26px; font-size:14px; line-height:1.6; }
+.wait-banner b{ color:var(--green); }
+.wait-timer-row{ display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:30px; flex-wrap:wrap; }
+.wait-timer-row .lbl{ font-family:var(--font-mono); font-size:12px; color:var(--ink-dim); }
+.memory-grid{ display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; max-width:480px; margin:0 auto; }
+.mcard{
+  aspect-ratio:1/1; border:1px solid rgba(51,65,85,0.8); border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center;
+  font-size:28px; cursor:pointer; background:rgba(15,23,42,0.8); transition:.2s; user-select:none;
+}
+.mcard:hover{ border-color:var(--cyan-dim); }
+.mcard.flipped, .mcard.matched{ background:rgba(56,189,248,0.12); border-color:var(--cyan); box-shadow:0 0 15px rgba(56,189,248,0.25); }
+.mcard.matched{ border-color:var(--green); background:rgba(34,197,94,0.12); box-shadow:0 0 15px rgba(34,197,94,0.25); opacity:.85; cursor:default; }
+.mcard .face{ display:none; }
+.mcard.flipped .face, .mcard.matched .face{ display:block; }
+.mcard .back{ display:block; color:var(--ink-dim); font-family:var(--font-display); font-size:16px; }
+.mcard.flipped .back, .mcard.matched .back{ display:none; }
+.mini-meta{ display:flex; justify-content:center; gap:26px; margin:20px 0; font-family:var(--font-mono); font-size:12px; color:var(--ink-dim); text-align:center; }
+.mini-meta b{ color:var(--cyan); font-family:var(--font-display); font-size:16px; }
+
+/* ---------- round 3 evidence + stepper ---------- */
+.evidence-tabs{ display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
+.evidence-tab{ padding:9px 16px; border:1px solid rgba(51,65,85,0.8); border-radius:20px; font-family:var(--font-mono); font-size:12px; cursor:pointer; color:var(--ink-dim); transition:.2s; }
+.evidence-tab:hover{ border-color:var(--cyan-dim); }
+.evidence-tab.active{ border-color:var(--cyan); color:var(--cyan); background:rgba(56,189,248,0.08); box-shadow:0 0 12px rgba(56,189,248,0.2); }
+.evidence-body{ display:none; }
+.evidence-body.active{ display:block; }
+.stepper-row{ display:flex; gap:10px; justify-content:center; margin-bottom:24px; flex-wrap:wrap; }
+.step-dot{
+  width:40px; height:40px; border-radius:50%; border:1px solid #334155; display:flex; align-items:center; justify-content:center;
+  font-size:13px; color:var(--ink-dim); cursor:pointer; font-family:var(--font-display); font-weight:700; transition:.2s;
+}
+.step-dot.current{ border-color:var(--cyan); color:var(--cyan); background:rgba(56,189,248,0.12); box-shadow:0 0 14px rgba(56,189,248,0.4); }
+.step-dot.answered:not(.current){ border-color:var(--green); color:var(--green); }
+
+/* ---------- instructions ---------- */
+.instr-list{ margin:0; padding-left:20px; line-height:2; color:#e2e8f0; font-size:14px; }
+.read-timer{ font-family:var(--font-display); font-size:48px; font-weight:900; color:var(--cyan); text-align:center; margin:26px 0 8px; text-shadow:0 0 10px rgba(56,189,248,0.7), 0 0 20px rgba(56,189,248,0.5), 0 0 30px rgba(56,189,248,0.3); }
+.read-note{ text-align:center; color:var(--ink-dim); font-family:var(--font-mono); font-size:12px; margin-bottom:26px; }
+
+/* ---------- countdown ---------- */
+.countdown-screen{ align-items:center; justify-content:center; }
+.countdown-num{ font-family:var(--font-display); font-size:clamp(100px,26vw,220px); font-weight:900; color:var(--cyan); text-shadow:0 0 30px rgba(56,189,248,0.8), 0 0 60px rgba(224,86,253,0.4); }
+
+/* ---------- modals ---------- */
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(2,6,23,0.8); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  display:none; align-items:center; justify-content:center; z-index:1000; padding:20px;
+}
+.modal-overlay.active{ display:flex; }
+.modal-box{
+  background:var(--panel-2); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(251,69,112,0.5); border-radius:16px; padding:32px; max-width:440px; width:100%; text-align:center;
+  box-shadow:0 0 60px rgba(251,69,112,0.2), 0 25px 50px -12px rgba(0,0,0,0.5);
+}
+.modal-box.neutral{ border-color:rgba(56,189,248,0.4); box-shadow:0 0 60px rgba(56,189,248,0.2), 0 25px 50px -12px rgba(0,0,0,0.5); }
+.modal-box h3{ margin:0 0 12px; color:var(--rose); font-size:19px; font-weight:700; }
+.modal-box.neutral h3{ color:var(--cyan); }
+.modal-box p{ color:var(--ink-dim); font-size:13px; line-height:1.6; margin-bottom:22px; }
+.pin-input{ display:flex; gap:10px; justify-content:center; margin-bottom:22px; }
+.pin-input input{ width:48px; height:56px; text-align:center; font-size:22px; font-family:var(--font-display); background:rgba(15,23,42,0.9); border:1px solid #334155; color:#fff; border-radius:var(--radius-sm); }
+.pin-input input:focus{ outline:none; border-color:var(--cyan); box-shadow:0 0 0 3px rgba(56,189,248,0.12); }
+
+/* ---------- admin dashboard ---------- */
+.admin-screen .wrap{ max-width:1100px; }
+.admin-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:22px; flex-wrap:wrap; gap:12px; }
+.admin-top h2{ font-weight:700; color:#fff; }
+.toggle{ display:flex; align-items:center; gap:10px; font-family:var(--font-mono); font-size:12px; color:var(--ink-dim); }
+.switch{ width:38px; height:20px; background:rgba(15,23,42,0.9); border:1px solid #334155; border-radius:20px; position:relative; cursor:pointer; }
+.switch::after{ content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:var(--ink-dim); transition:.2s; }
+.switch.on{ border-color:var(--green); }
+.switch.on::after{ left:18px; background:var(--green); box-shadow:0 0 8px var(--green); }
+table{ width:100%; border-collapse:collapse; font-size:13px; }
+th,td{ padding:12px 14px; text-align:left; border-bottom:1px solid rgba(30,41,59,0.9); }
+th{ color:var(--cyan); font-family:var(--font-mono); font-weight:500; font-size:11px; letter-spacing:0.08em; }
+tr:hover td{ background:rgba(56,189,248,0.04); }
+.rank-1{ color:var(--amber); font-weight:700; }
+.rank-1 td:first-child::before{ content:"🥇 "; }
+.rank-2{ color:#c7d2e0; font-weight:700; }
+.rank-2 td:first-child::before{ content:"🥈 "; }
+.rank-3{ color:#d08a52; font-weight:700; }
+.rank-3 td:first-child::before{ content:"🥉 "; }
+
+/* ---------- results ---------- */
+.results-hero{ text-align:center; padding:60px 0 30px; }
+.results-hero .big{ font-family:var(--font-display); font-size:72px; font-weight:900; color:var(--green); text-shadow:0 0 10px rgba(34,197,94,0.7), 0 0 30px rgba(34,197,94,0.4); }
+.score-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px; margin:30px 0; }
+.score-grid .cell{ text-align:center; background:var(--panel); backdrop-filter:blur(12px); border:1px solid rgba(51,65,85,0.5); border-radius:var(--radius); padding:18px 10px; }
+.score-grid .cell b{ display:block; font-family:var(--font-display); font-size:28px; color:var(--cyan); text-shadow:0 0 10px rgba(56,189,248,0.5); }
+.score-grid .cell:nth-child(2) b{ color:var(--magenta); text-shadow:0 0 10px rgba(224,86,253,0.5); }
+.score-grid .cell:nth-child(3) b{ color:#34d399; text-shadow:0 0 10px rgba(52,211,153,0.5); }
+.score-grid .cell span{ font-family:var(--font-mono); font-size:11px; color:var(--ink-dim); }
+
+/* ---------- toast (cyber alert) ---------- */
+.toast{
+  position:fixed; bottom:24px; right:24px; z-index:2000; max-width:calc(100vw - 48px);
+  background:var(--panel-2); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  border:1px solid var(--cyan); border-radius:var(--radius);
+  padding:14px 18px; font-family:var(--font-mono); font-size:13px; color:#fff;
+  box-shadow:0 25px 50px -12px rgba(0,0,0,0.5), 0 0 20px rgba(56,189,248,0.25);
+  display:flex; align-items:center; gap:12px;
+  opacity:0; transform:translateY(8px); transition:.25s; pointer-events:none;
+}
+.toast::before{ content:""; width:18px; height:18px; flex-shrink:0; background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20512%20512%22%3E%3Cpath%20fill%3D%22%2334d399%22%20d%3D%22M256%20512a256%20256%200%201%201%200-512%20256%20256%200%201%201%200%20512m118-366.3c-10.7-7.8-25.7-5.4-33.5%205.3L221.1%20315.2%20169%20263.1c-9.4-9.4-24.6-9.4-33.9%200s-9.4%2024.6%200%2033.9l72%2072c5%205%2011.8%207.5%2018.8%207s13.4-4.1%2017.5-9.8l135.9-187c7.8-10.7%205.4-25.7-5.3-33.5%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat; }
+.toast.show{ opacity:1; transform:translateY(0); }
+
+/* ---------- footer ---------- */
+footer.foot{
+  position:relative; z-index:1; text-align:center; padding:16px; width:100%;
+  font-family:var(--font-mono); font-size:12px; color:#64748b;
+  background:var(--panel); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  border-top:1px solid #0f172a;
+}
+
+@media (max-width:640px){
+  .wrap{ padding:22px 16px; }
+  .statusbar{ padding:12px 16px; }
+  .statusbar .brand{ font-size:15px; }
+  .statusbar .brand-sub{ display:none; }
+  .status-pill{ font-size:11px; padding:5px 10px; }
+  .qtext{ font-size:16px; }
+  .round-head h2{ font-size:20px; }
+  .memory-grid{ grid-template-columns:repeat(3,1fr); }
+  .results-hero .big{ font-size:56px; }
+  .reg-card{ padding:24px 20px; }
+}
+
+/* ============================================================
+   v2 ADDITIONS: header controls, rank badge, mini-games,
+   matrix rain, evidence cards, confirm modal
+   ============================================================ */
+.hdr-right{ display:flex; align-items:center; gap:10px; min-width:0; }
+.icon-btn{
+  width:36px; height:36px; border-radius:50%; flex-shrink:0; cursor:pointer; font-size:15px;
+  border:1px solid rgba(51,65,85,0.7); background:rgba(15,23,42,0.8); color:var(--cyan);
+  display:inline-flex; align-items:center; justify-content:center; transition:.2s;
+}
+.icon-btn:hover{ border-color:var(--cyan); box-shadow:0 0 14px rgba(56,189,248,0.35); }
+.icon-btn.off{ color:var(--ink-dim); }
+.rank-badge{
+  --rank-c:var(--cyan);
+  display:none; align-items:center; gap:8px; white-space:nowrap;
+  font-family:var(--font-mono); font-size:11px; padding:6px 12px; border-radius:999px;
+  border:1px solid var(--rank-c); color:var(--rank-c); background:rgba(15,23,42,0.8);
+  box-shadow:0 0 12px color-mix(in srgb, var(--rank-c) 30%, transparent);
+}
+.rank-badge.show{ display:inline-flex; }
+.rank-badge b{ font-family:var(--font-display); font-size:11px; letter-spacing:0.06em; }
+.rank-badge small{ color:var(--ink-dim); font-size:10px; }
+.rank-badge.pop{ animation:rankPop .9s ease; }
+@keyframes rankPop{ 0%{ transform:scale(1); } 30%{ transform:scale(1.2); box-shadow:0 0 28px var(--rank-c); } 100%{ transform:scale(1); } }
+
+/* matrix rain (waiting room) */
+#matrixCanvas{ position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; opacity:0.38; display:none; }
+body.matrix-on #matrixCanvas{ display:block; }
+body.matrix-on #cyberCanvas{ display:none; }
+
+/* waiting room game tabs */
+.game-tabs{ display:flex; gap:8px; justify-content:center; margin-bottom:22px; flex-wrap:wrap; }
+.game-tab{
+  padding:10px 18px; border:1px solid rgba(51,65,85,0.8); border-radius:24px; background:transparent; cursor:pointer;
+  font-family:var(--font-mono); font-size:12px; color:var(--ink-dim); transition:.2s;
+}
+.game-tab:hover{ border-color:var(--cyan-dim); }
+.game-tab.active{ border-color:var(--cyan); color:var(--cyan); background:rgba(56,189,248,0.08); box-shadow:0 0 12px rgba(56,189,248,0.2); }
+.game-pane{ display:none; }
+.game-pane.active{ display:block; }
+.game-blurb{ text-align:center; color:var(--ink-dim); font-size:12px; margin:0 0 20px; line-height:1.6; }
+
+/* Hack The Terminal */
+.terminal{
+  background:rgba(2,6,23,0.94); border:1px solid rgba(34,197,94,0.4); border-radius:var(--radius); overflow:hidden;
+  font-family:var(--font-mono); font-size:13px; box-shadow:0 0 26px rgba(34,197,94,0.14);
+}
+.term-bar{ display:flex; align-items:center; gap:7px; padding:9px 12px; background:rgba(15,23,42,0.95); border-bottom:1px solid rgba(34,197,94,0.22); flex-wrap:wrap; }
+.term-bar .td{ width:10px; height:10px; border-radius:50%; display:block; }
+.term-bar .td.r{ background:#fb4570; } .term-bar .td.y{ background:#fbbf24; } .term-bar .td.g{ background:#22c55e; }
+.term-title{ color:var(--ink-dim); font-size:11px; margin-left:6px; flex:1; }
+.term-stats{ color:var(--ink-dim); font-size:11px; }
+.term-stats b{ color:var(--green); }
+.term-log{ height:230px; overflow-y:auto; padding:12px 14px; line-height:1.75; color:#86efac; user-select:text; word-break:break-word; }
+.term-log .err{ color:var(--rose); } .term-log .ok{ color:#34d399; } .term-log .dim{ color:#64748b; } .term-log .cy{ color:var(--cyan); }
+.term-input{ display:flex; align-items:center; gap:10px; padding:10px 14px; border-top:1px solid rgba(34,197,94,0.22); }
+.term-input .prompt{ color:var(--green); white-space:nowrap; font-size:12px; }
+.term-input input{ flex:1; min-width:0; background:transparent; border:none; outline:none; color:#e2e8f0; font:inherit; text-transform:uppercase; letter-spacing:0.08em; user-select:text; }
+
+/* Round 3 evidence cards */
+.evidence-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:14px; }
+@media (max-width:760px){ .evidence-grid{ grid-template-columns:1fr; } }
+.ev-card{ background:rgba(2,6,23,0.55); border:1px solid rgba(56,189,248,0.25); border-radius:var(--radius); overflow:hidden; transition:.2s; }
+.ev-card.flagged{ border-color:var(--rose); box-shadow:0 0 18px rgba(251,69,112,0.25); }
+.ev-head{ display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; background:rgba(56,189,248,0.06); }
+.ev-card.flagged .ev-head{ background:rgba(251,69,112,0.08); }
+.ev-num{ font-family:var(--font-mono); font-size:10px; color:var(--ink-dim); }
+.ev-title{ font-family:var(--font-display); font-size:12px; letter-spacing:0.06em; color:var(--cyan); flex:1; }
+.ev-flag{ background:transparent; border:1px solid #334155; color:var(--ink-dim); width:30px; height:30px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:13px; transition:.2s; }
+.ev-flag:hover{ border-color:var(--rose); color:var(--rose); }
+.ev-flag.on{ background:rgba(251,69,112,0.15); border-color:var(--rose); color:var(--rose); }
+.ev-chev{ color:var(--ink-dim); font-size:12px; transition:transform .2s; }
+.ev-card.collapsed .ev-chev{ transform:rotate(-90deg); }
+.ev-body{ padding:12px 14px 14px; }
+.ev-card.collapsed .ev-body{ display:none; }
+.ev-body .mono-box{ margin:0; font-size:12.5px; line-height:1.7; word-break:break-word; }
+.ev-note{ font-size:11px; color:var(--ink-dim); margin:10px 0 0; font-family:var(--font-mono); }
+
+/* admin */
+.demo-tag{ font-family:var(--font-mono); font-size:10px; color:var(--amber); border:1px solid rgba(242,178,59,0.4); border-radius:20px; padding:3px 10px; margin-left:0; }
+.results-hero .rank-line{ font-family:var(--font-mono); font-size:12px; color:var(--amber); margin-top:4px; letter-spacing:0.08em; }
+
+@media (max-width:640px){
+  .statusbar{ flex-wrap:wrap; }
+  .hdr-right{ width:100%; justify-content:space-between; }
+  .status-pill{ flex:1; justify-content:center; }
+  .rank-badge small{ display:none; }
+  .term-log{ height:200px; }
+  .toast{ left:16px; right:16px; bottom:16px; max-width:none; }
+}
+
+:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
+@media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<!-- Icons: Font Awesome Free (CC BY 4.0) https://fontawesome.com/license/free — inlined so no external icon font is needed -->
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i-shield-halved" viewBox="0 0 512 512"><path d="M256 0c4.6 0 9.2 1 13.4 2.9l188.4 79.9c22 9.3 38.4 31 38.3 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0C57.3 420.7 16.6 239.2 16.1 140c-.1-26.2 16.3-47.9 38.3-57.2L242.7 2.9C246.9 1 251.4 0 256 0m0 66.8v378.1c138-66.8 175.1-214.8 176-303.4L256 66.9z"/></symbol>
+<symbol id="i-user-shield" viewBox="0 0 576 512"><path d="M224 248a120 120 0 1 0 0-240 120 120 0 1 0 0 240m-29.7 56C95.8 304 16 383.8 16 482.3c0 16.4 13.3 29.7 29.7 29.7h251.5C261 469.4 240 414.5 240 356.4v-31.1c0-7.3 1-14.5 2.9-21.3zm251 184.5-13.3 6.3V306.7l96 32v19.6c0 55.8-32.2 106.5-82.7 130.3zm-23.4-229-112 37.3c-13.1 4.4-21.9 16.6-21.9 30.4v31.1c0 74.4 43 142.1 110.2 173.7l18.5 8.7c4.8 2.2 10 3.4 15.2 3.4s10.5-1.2 15.2-3.4l18.5-8.7C533 500.3 576 432.6 576 358.2v-31.1c0-13.8-8.8-26-21.9-30.4l-112-37.3c-6.6-2.2-13.7-2.2-20.2 0z"/></symbol>
+<symbol id="i-code" viewBox="0 0 576 512"><path d="M360.8 1.2c-17-4.9-34.7 5-39.6 22l-128 448c-4.9 17 5 34.7 22 39.6s34.7-5 39.6-22l128-448c4.9-17-5-34.7-22-39.6m64.6 136.1c-12.5 12.5-12.5 32.8 0 45.3l73.4 73.4-73.4 73.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l96-96c12.5-12.5 12.5-32.8 0-45.3l-96-96c-12.5-12.5-32.8-12.5-45.3 0zm-274.7 0c-12.5-12.5-32.8-12.5-45.3 0l-96 96c-12.5 12.5-12.5 32.8 0 45.3l96 96c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256l73.3-73.4c12.5-12.5 12.5-32.8 0-45.3z"/></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 512 512"><path d="M502.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-160-160c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L402.7 224H32c-17.7 0-32 14.3-32 32s14.3 32 32 32h370.7L297.3 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l160-160z"/></symbol>
+<symbol id="i-id-card" viewBox="0 0 576 512"><path d="M0 96c0-35.3 28.7-64 64-64h448c35.3 0 64 28.7 64 64zm0 48h576v272c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64zm247.3 272c20.2 0 35.3-19.4 22.4-35-14.7-17.7-36.9-29-61.7-29h-64c-24.8 0-47 11.3-61.7 29-12.9 15.6 2.2 35 22.4 35h142.5zM176 312a56 56 0 1 0 0-112 56 56 0 1 0 0 112m184-104c-13.3 0-24 10.7-24 24s10.7 24 24 24h112c13.3 0 24-10.7 24-24s-10.7-24-24-24zm0 96c-13.3 0-24 10.7-24 24s10.7 24 24 24h112c13.3 0 24-10.7 24-24s-10.7-24-24-24z"/></symbol>
+<symbol id="i-user" viewBox="0 0 448 512"><path d="M224 248a120 120 0 1 0 0-240 120 120 0 1 0 0 240m-29.7 56C95.8 304 16 383.8 16 482.3c0 16.4 13.3 29.7 29.7 29.7h356.6c16.4 0 29.7-13.3 29.7-29.7 0-98.5-79.8-178.3-178.3-178.3z"/></symbol>
+<symbol id="i-building-columns" viewBox="0 0 512 512"><path d="M271.9 20.2c-9.8-5.6-21.9-5.6-31.8 0l-224 128c-12.6 7.2-18.8 22-15.1 36S17.5 208 32 208h32v208l-51.2 38.4C4.7 460.4 0 469.9 0 480c0 17.7 14.3 32 32 32h448c17.7 0 32-14.3 32-32 0-10.1-4.7-19.6-12.8-25.6L448 416V208h32c14.5 0 27.2-9.8 30.9-23.8s-2.5-28.8-15.1-36l-224-128zM400 208v208h-64V208zm-112 0v208h-64V208zm-112 0v208h-64V208zm80-112a32 32 0 1 1 0 64 32 32 0 1 1 0-64"/></symbol>
+<symbol id="i-graduation-cap" viewBox="0 0 576 512"><path d="m48 195.8 209.2 86.1c9.8 4 20.2 6.1 30.8 6.1s21-2.1 30.8-6.1l242.4-99.8c9-3.7 14.8-12.4 14.8-22.1s-5.8-18.4-14.8-22.1L318.8 38.1c-9.8-4-20.2-6.1-30.8-6.1s-21 2.1-30.8 6.1L14.8 137.9C5.8 141.6 0 150.3 0 160v296c0 13.3 10.7 24 24 24s24-10.7 24-24zm48 71.7V384c0 53 86 96 192 96s192-43 192-96V267.4l-142.9 58.9c-15.6 6.4-32.2 9.7-49.1 9.7s-33.5-3.3-49.1-9.7L96 267.4z"/></symbol>
+<symbol id="i-circle-check" viewBox="0 0 512 512"><path d="M256 512a256 256 0 1 1 0-512 256 256 0 1 1 0 512m118-366.3c-10.7-7.8-25.7-5.4-33.5 5.3L221.1 315.2 169 263.1c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9l72 72c5 5 11.8 7.5 18.8 7s13.4-4.1 17.5-9.8l135.9-187c7.8-10.7 5.4-25.7-5.3-33.5"/></symbol>
+<symbol id="i-volume-high" viewBox="0 0 640 512"><path d="M533.6 32.5c-10.3-8.4-25.4-6.8-33.8 3.5s-6.8 25.4 3.5 33.8c54.2 44 88.7 111 88.7 186.2s-34.5 142.2-88.7 186.3c-10.3 8.4-11.8 23.5-3.5 33.8s23.5 11.8 33.8 3.5C598.5 426.7 640 346.2 640 256S598.5 85.2 533.6 32.5M473.1 107c-10.3-8.4-25.4-6.8-33.8 3.5s-6.8 25.4 3.5 33.8C475.3 170.7 496 210.9 496 256s-20.7 85.3-53.2 111.8c-10.3 8.4-11.8 23.5-3.5 33.8s23.5 11.8 33.8 3.5c43.2-35.2 70.9-88.9 70.9-149s-27.7-113.8-70.9-149zm-60.5 74.5c-10.3-8.4-25.4-6.8-33.8 3.5s-6.8 25.4 3.5 33.8C393.1 227.6 400 241 400 256s-6.9 28.4-17.7 37.3c-10.3 8.4-11.8 23.5-3.5 33.8s23.5 11.8 33.8 3.5c21.5-17.7 35.4-44.5 35.4-74.6s-13.9-56.9-35.4-74.5M80 352h48l134.1 119.2c6.4 5.7 14.6 8.8 23.1 8.8 19.2 0 34.8-15.6 34.8-34.8V66.8c0-19.2-15.6-34.8-34.8-34.8-8.5 0-16.7 3.1-23.1 8.8L128 160H80c-26.5 0-48 21.5-48 48v96c0 26.5 21.5 48 48 48"/></symbol>
+<symbol id="i-volume-xmark" viewBox="0 0 576 512"><path d="M48 352h48l134.1 119.2c6.4 5.7 14.6 8.8 23.1 8.8 19.2 0 34.8-15.6 34.8-34.8V66.8c0-19.2-15.6-34.8-34.8-34.8-8.5 0-16.7 3.1-23.1 8.8L96 160H48c-26.5 0-48 21.5-48 48v96c0 26.5 21.5 48 48 48m319-177c-9.4 9.4-9.4 24.6 0 33.9l47 47-47 47c-9.4 9.4-9.4 24.6 0 33.9s24.6 9.4 33.9 0l47-47 47 47c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-47-47 47-47c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-47 47-47-47c-9.4-9.4-24.6-9.4-33.9 0"/></symbol>
+<symbol id="i-user-secret" viewBox="0 0 448 512"><path d="M171-16c-36.4 0-57.8 58.3-68.3 112H72c-13.3 0-24 10.7-24 24s10.7 24 24 24h24v32c0 17 3.3 33.2 9.3 48H75.5C60.3 224 48 236.3 48 251.5c0 3 .5 5.9 1.4 8.7l28.9 86.6C40.2 379.6 16 428.1 16 482.3c0 16.4 13.3 29.7 29.7 29.7h356.6c16.4 0 29.7-13.3 29.7-29.7 0-54.2-24.2-102.7-62.3-135.4l28.9-86.6c.9-2.8 1.4-5.7 1.4-8.7 0-15.2-12.3-27.5-27.5-27.5h-29.8c6-14.8 9.3-31 9.3-48v-32h24c13.3 0 24-10.7 24-24s-10.7-24-24-24h-30.7c-10.4-53.7-31.9-112-68.3-112-9.6 0-19 3.9-27.5 8.2C241.3-3.6 231.1.1 224 .1s-17.3-3.7-25.5-7.8C190-12.1 180.6-16 171-16m93.7 484.4-24.8-70.9 27.9-32.5c2.7-3.2 4.2-7.2 4.2-11.4 0-9.7-7.8-17.5-17.5-17.5h-61c-9.7 0-17.5 7.8-17.5 17.5 0 4.2 1.5 8.2 4.2 11.4l27.9 32.5-24.8 70.9-57-180.4H162c18.4 10.2 39.5 16 62 16s43.6-5.8 62-16h35.7zM224 256c-34.7 0-64.2-22.1-75.3-53 5.7 3.2 12.3 5 19.3 5h12.4c16.5 0 31.1-10.6 36.3-26.2 2.3-7 12.2-7 14.5 0 5.2 15.6 19.9 26.2 36.3 26.2h12.4c7 0 13.6-1.8 19.3-5-11.1 30.9-40.6 53-75.3 53z"/></symbol>
+<symbol id="i-magnifying-glass" viewBox="0 0 512 512"><path d="M416 208c0 45.9-14.9 88.3-40 122.7l126.6 126.7c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.1-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0s208 93.1 208 208M208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288"/></symbol>
+<symbol id="i-crown" viewBox="0 0 576 512"><path d="M313 87.2c9.2-7.3 15-18.6 15-31.2 0-22.1-17.9-40-40-40s-40 17.9-40 40c0 12.6 5.9 23.9 15 31.2l-68.4 107.6c-10 15.7-31.3 19.6-46.2 8.4l-59.5-44.5c4.5-6.4 7.1-14.3 7.1-22.7 0-22.1-17.9-40-40-40s-40 17.9-40 40c0 21.8 17.5 39.6 39.2 40l32.6 217.5c4.7 31.3 31.6 54.5 63.3 54.5h273.8c31.7 0 58.6-23.2 63.3-54.5L520.8 176c21.7-.4 39.2-18.2 39.2-40 0-22.1-17.9-40-40-40s-40 17.9-40 40c0 8.4 2.6 16.3 7.1 22.7l-59.4 44.6c-14.9 11.2-36.2 7.3-46.2-8.4z"/></symbol>
+<symbol id="i-flag" viewBox="0 0 448 512"><path d="M64 32C64 14.3 49.7 0 32 0S0 14.3 0 32v448c0 17.7 14.3 32 32 32s32-14.3 32-32V358.4l62.7-18.8c41.9-12.6 87.1-8.7 126.2 10.9 42.7 21.4 92.5 24 137.2 7.2l37.1-13.9c12.5-4.7 20.8-16.6 20.8-30V66.1c0-23-24.2-38-44.8-27.7l-11.8 5.9c-44.9 22.5-97.8 22.5-142.8 0-36.4-18.2-78.3-21.8-117.2-10.1L64 54.4z"/></symbol>
+<symbol id="i-chevron-down" viewBox="0 0 448 512"><path d="M201.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 338.7 54.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/></symbol>
+<symbol id="i-trash-can" viewBox="0 0 448 512"><path d="M136.7 5.9C141.1-7.2 153.3-16 167.1-16H281c13.8 0 26 8.8 30.4 21.9L320 32h96c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 96 0 81.7 0 64s14.3-32 32-32h96zM32 144h384v304c0 35.3-28.7 64-64 64H96c-35.3 0-64-28.7-64-64zm88 64c-13.3 0-24 10.7-24 24v192c0 13.3 10.7 24 24 24s24-10.7 24-24V232c0-13.3-10.7-24-24-24m104 0c-13.3 0-24 10.7-24 24v192c0 13.3 10.7 24 24 24s24-10.7 24-24V232c0-13.3-10.7-24-24-24m104 0c-13.3 0-24 10.7-24 24v192c0 13.3 10.7 24 24 24s24-10.7 24-24V232c0-13.3-10.7-24-24-24"/></symbol>
+</svg>
+
+<!-- ============ BACKGROUND: PARTICLE CANVAS + GRID + SCANLINE ============ -->
+<canvas id="cyberCanvas"></canvas>
+<canvas id="matrixCanvas"></canvas>
+<div class="cyber-grid"></div>
+<div class="scanline"></div>
+
+<!-- ============ HEADER / STATUS BAR ============ -->
+<header class="statusbar" id="statusBar">
+  <div class="brand-wrap">
+    <i class="ico"><svg viewBox="0 0 512 512" aria-hidden="true"><use href="#i-shield-halved"/></svg></i>
+    <span class="brand">CYBER<span>ARENA</span></span>
+    <span class="brand-sub">// Digital Trust Challenge</span>
+  </div>
+  <div class="hdr-right">
+    <div class="rank-badge" id="rankBadge" title="Live rank — based on questions completed">
+      <i class="ico" id="rankIcon"><svg viewBox="0 0 512 512" aria-hidden="true"><use href="#i-user-secret"/></svg></i>
+      <b id="rankName">Cyber Rookie</b><small id="rankCount">0/0</small>
+    </div>
+    <button class="icon-btn" id="muteBtn" onclick="toggleMute()" aria-label="Mute sound" title="Mute / unmute sound effects">
+      <i class="ico"><svg viewBox="0 0 512 512" aria-hidden="true"><use href="#i-volume-high"/></svg></i>
+    </button>
+    <div class="status-pill">
+      <span class="ping"></span>
+      <span id="playerTag">SYSTEM ONLINE • LIVE PORTAL</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============ SCREEN: LANDING ============ -->
+<section class="screen active" id="screen-landing">
+  <div class="wrap landing-wrap">
+    <div class="landing-hero">
+      <div class="dept-presents">CSBS DEPT PRESENTS</div>
+      <div class="hologram-shield">
+        <div class="shield-ring"><i class="ico"><svg viewBox="0 0 576 512" aria-hidden="true"><use href="#i-user-shield"/></svg></i></div>
+        <i class="ico shield-code"><svg viewBox="0 0 576 512" aria-hidden="true"><use href="#i-code"/></svg></i>
+      </div>
+      <h1 class="landing-title">Cyber<span class="accent">Arena</span>: The Ultimate Digital Trust Challenge</h1>
+      <p class="landing-sub">3-Hour Solo Cyber Forensics &amp; Digital Trust Competition. Three rounds, one investigation, zero margin for error. Every click is logged — every second counts.</p>
+      <div class="landing-meta">
+        <div><b>3 Hrs</b>Total duration</div>
+        <div><b>03</b>Rounds</div>
+        <div><b>Solo</b>Format</div>
+        <div><b>Live</b>Leaderboard</div>
+      </div>
+      <button class="btn hero" onclick="go('screen-register')"><span>START CHALLENGE</span><i class="ico"><svg viewBox="0 0 512 512" aria-hidden="true"><use href="#i-arrow-right"/></svg></i></button>
+    </div>
+  </div>
+  <footer class="foot">CyberArena · CSBS Department · Unauthorized reproduction of round content is a violation of the challenge rules.</footer>
+</section>
+
+<!-- ============ SCREEN: REGISTRATION ============ -->
+<section class="screen" id="screen-register">
+  <div class="wrap" style="justify-content:center;">
+    <div class="panel reg-card" style="max-width:460px; margin:0 auto; width:100%;">
+      <div class="reg-head">
+        <i class="ico"><svg viewBox="0 0 576 512" aria-hidden="true"><use href="#i-id-card"/></svg></i>
+        <div class="landing-eyebrow">STEP 1 / 5</div>
+        <h2>Enter the Arena</h2>
+        <p>Register your identity before the perimeter opens.</p>
+      </div>
+      <div class="field">
+        <label>STUDENT NAME</label>
+        <div class="input-wrap">
+          <i class="ico"><svg viewBox="0 0 448 512" aria-hidden="true"><use href="#i-user"/></svg></i>
+          <input type="text" id="regName" placeholder="Full name" autocomplete="off">
+        </div>
+      </div>
+      <div class="field">
+        <label>DEPARTMENT</label>
+        <div class="input-wrap">
+          <i class="ico"><svg viewBox="0 0 512 512" aria-hidden="true"><use href="#i-building-columns"/></svg></i>
+          <input type="text" id="regDept" placeholder="e.g. CSBS" autocomplete="off">
+        </div>
+      </div>
+      <div class="field">
+        <label>YEAR</label>
+        <div class="input-wrap">
+          <i class="ico"><svg viewBox="0 0 576 512" aria-hidden="true"><use href="#i-graduation-cap"/></svg></i>
+          <select id="regYear">
+            <option value="">Select year</option>
+            <option value="I">I</option>
+            <option value="II">II</option>
+            <option value="III">III</option>
+            <option value="IV">IV</option>
+          </select>
+        </div>
+      </div>
+      <div id="regError" style="color:var(--rose); font-size:12px; margin-bottom:14px; display:none;">All fields are required.</div>
+      <button class="btn solid" style="width:100%;" onclick="submitRegistration()"><span>ENTER ARENA</span><i class="ico"><svg viewBox="0 0 512 512" aria-hidden="true"><use href="#i-arrow-right"/></svg></i></button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCREEN: ROUND INSTRUCTIONS ============ -->
+<section class="screen" id="screen-instructions">
+  <div class="wrap" style="max-width:680px;">
+    <div class="landing-eyebrow" id="instrEyebrow">ROUND 1 / 3</div>
+    <h2 id="instrTitle" style="margin:6px 0 20px;">Round Title</h2>
+    <div class="panel">
+      <ul class="instr-list" id="instrList"></ul>
+    </div>
+    <div class="read-timer" id="readTimer">01:00</div>
+    <div class="read-note">Mandatory reading period — the round begins automatically when this reaches zero.</div>
+  </div>
+</section>
+
+<!-- ============ SCREEN: 3-2-1 COUNTDOWN ============ -->
+<section class="screen countdown-screen" id="screen-countdown">
+  <div class="countdown-num" id="countdownNum">3</div>
+</section>
+
+<!-- ============ SCREEN: ROUND 1 — CYBER QUIZ MASTER ============ -->
+<section class="screen" id="screen-round1">
+  <div class="wrap">
+    <div class="round-head">
+      <div>
+        <h2>Round 1 — Cyber Quiz Master</h2>
+        <span class="tag">30 QUESTIONS</span>
+      </div>
+      <div class="timer roundTimerDisplay" id="r1Timer">30:00</div>
+    </div>
+    <div class="progressbar"><div id="r1Progress" style="width:0%;"></div></div>
+    <div class="panel">
+      <div class="qcounter" id="r1Counter">Question 1 / 30</div>
+      <div class="qtext" id="r1QText"></div>
+      <div class="options" id="r1Options"></div>
+    </div>
+    <div class="round-nav">
+      <button class="btn ghost" id="r1Prev" onclick="r1Nav(-1)">← Previous</button>
+      <button class="btn solid" id="r1Next" onclick="r1Nav(1)">Next →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCREEN: ROUND 2 — CYBER ARCADE ============ -->
+<section class="screen" id="screen-round2">
+  <div class="wrap">
+    <div class="round-head">
+      <div>
+        <h2>Round 2 — Cyber Arcade</h2>
+        <span class="tag">15 PUZZLES</span>
+      </div>
+      <div class="timer roundTimerDisplay" id="r2Timer">30:00</div>
+    </div>
+    <div class="progressbar"><div id="r2Progress" style="width:0%;"></div></div>
+    <div class="panel">
+      <div class="qcounter" id="r2Counter">Puzzle 1 / 15</div>
+      <div class="puzzle-card" id="r2Card"></div>
+      <div class="field" style="margin-top:6px;">
+        <label>YOUR ANSWER</label>
+        <input type="text" id="r2Answer" placeholder="Type your answer" autocomplete="off">
+      </div>
+    </div>
+    <div class="round-nav">
+      <button class="btn ghost" id="r2Prev" onclick="r2Nav(-1)">← Previous</button>
+      <button class="btn solid" id="r2Next" onclick="r2Nav(1)">Next →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCREEN: WAITING ROOM (early finishers, rounds 1 & 2) ============ -->
+<section class="screen" id="screen-waiting">
+  <div class="wrap" style="max-width:720px;">
+    <div class="wait-banner">
+      <b id="waitTitle">Round submitted!</b> Waiting for the main timer to finish before Round <span id="waitNextRound">2</span> begins for everyone.
+    </div>
+    <div class="wait-timer-row">
+      <span class="lbl">TIME REMAINING IN ROUND</span>
+      <div class="timer roundTimerDisplay" id="waitTimer">00:00</div>
+    </div>
+    <div class="panel">
+      <div class="game-tabs">
+        <button class="game-tab active" data-game="flip" onclick="switchGame('flip')">🧩 Encryption Flip Match</button>
+        <button class="game-tab" data-game="term" onclick="switchGame('term')">💻 Hack The Terminal</button>
+      </div>
+
+      <div class="game-pane active" id="pane-flip">
+        <p class="game-blurb">Stay sharp while you wait — flip the cards and match the encrypted symbol pairs.</p>
+        <div class="mini-meta"><div><b id="miniMoves">0</b><br>Moves</div><div><b id="miniMatches">0</b>/8<br>Matched</div></div>
+        <div class="memory-grid" id="miniGrid"></div>
+        <div style="text-align:center; margin-top:20px;">
+          <button class="btn ghost small" onclick="initMiniGame()">↻ New Game</button>
+        </div>
+      </div>
+
+      <div class="game-pane" id="pane-term">
+        <p class="game-blurb">A transmission was intercepted. Decrypt the Caesar-shifted word before you run out of attempts.</p>
+        <div class="terminal">
+          <div class="term-bar">
+            <span class="td r"></span><span class="td y"></span><span class="td g"></span>
+            <span class="term-title">root@cyberarena: ~/decrypt</span>
+            <span class="term-stats">ATTEMPTS <b id="termTries">6</b> · DECRYPTED <b id="termSolved">0</b></span>
+          </div>
+          <div class="term-log" id="termLog"></div>
+          <div class="term-input">
+            <span class="prompt">root@arena:~$</span>
+            <input type="text" id="termInput" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="24" placeholder="type your answer…">
+            <button class="btn small" onclick="termSubmit()">RUN</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCREEN: ROUND 3 — BOSS LEVEL ============ -->
+<section class="screen" id="screen-round3">
+  <div class="wrap">
+    <div class="round-head">
+      <div>
+        <h2>Round 3 — The Final Investigation</h2>
+        <span class="tag">BOSS LEVEL</span>
+      </div>
+      <div class="timer roundTimerDisplay" id="r3Timer">60:00</div>
+    </div>
+    <div class="panel" style="margin-bottom:20px;">
+      <div class="landing-eyebrow" id="r3CaseTitle" style="margin-bottom:10px;"></div>
+      <p id="r3CaseIntro" style="font-size:13.5px; color:var(--ink-dim); line-height:1.7; margin:0 0 16px;"></p>
+      <div class="evidence-grid" id="evidenceGrid"></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0; font-size:15px; color:var(--ink); text-align:center;">Investigation Report</h3>
+      <div class="stepper-row" id="r3Stepper"></div>
+      <div id="r3FieldSlot"></div>
+      <div class="round-nav">
+        <button class="btn ghost" id="r3Prev" onclick="r3Nav(-1)">← Previous Question</button>
+        <button class="btn solid" id="r3Next" onclick="r3Nav(1)">Next Question →</button>
+        <button class="btn green" id="r3Submit" style="display:none;" onclick="requestSubmit(3)">SUBMIT FINAL INVESTIGATION REPORT →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCREEN: RESULTS / EVENT FINISHED ============ -->
+<section class="screen" id="screen-results">
+  <div class="wrap" style="max-width:560px;">
+    <div class="results-hero">
+      <div class="landing-eyebrow">EVENT FINISHED — CHALLENGE COMPLETE</div>
+      <div class="big" id="resultsScore">0</div>
+      <p style="color:var(--ink-dim); font-size:13px;">Total points across all three rounds</p>
+      <div class="rank-line" id="resRank"></div>
+    </div>
+    <div class="score-grid">
+      <div class="cell"><b id="resR1">0</b><span>ROUND 1</span></div>
+      <div class="cell"><b id="resR2">0</b><span>ROUND 2</span></div>
+      <div class="cell"><b id="resR3">0</b><span>ROUND 3</span></div>
+    </div>
+    <div class="panel" style="text-align:center; font-size:12px; color:var(--ink-dim);">
+      Your results have been submitted to the live leaderboard and your saved session was cleared. Thank you for competing in CyberArena.
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCREEN: ADMIN DASHBOARD (secret) ============ -->
+<section class="screen admin-screen" id="screen-admin">
+  <div class="wrap">
+    <div class="admin-top">
+      <div>
+        <div class="landing-eyebrow">RESTRICTED ACCESS</div>
+        <h2 style="margin:4px 0 8px;">Live Admin Leaderboard</h2>
+        <span class="demo-tag" id="adminDemoTag" style="display:none;"></span>
+      </div>
+      <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+        <div class="toggle">
+          <span>Auto-refresh (5s)</span>
+          <div class="switch" id="autoRefreshSwitch" onclick="toggleAutoRefresh()"></div>
+        </div>
+        <button class="btn ghost small" onclick="refreshLeaderboard()">↻ Refresh</button>
+        <button class="btn ghost small" onclick="clearLocalSession(this)"><i class="ico"><svg viewBox="0 0 448 512" aria-hidden="true"><use href="#i-trash-can"/></svg></i><span>Clear saved session</span></button>
+        <button class="btn rose small" onclick="exitAdmin()">Exit</button>
+      </div>
+    </div>
+    <div class="panel" style="padding:0; overflow-x:auto;">
+      <table>
+        <thead>
+          <tr><th>Rank</th><th>Student</th><th>Dept</th><th>Year</th><th>R1</th><th>R2</th><th>R3</th><th>Total</th><th>Status</th><th>Flags</th></tr>
+        </thead>
+        <tbody id="adminTableBody"></tbody>
+      </table>
+    </div>
+    <p style="font-size:11px; color:var(--ink-dim); margin-top:14px;">Data source: Google Apps Script GET endpoint (Code.gs). Set API_URL in the script section to connect your sheet. “Clear saved session” wipes the auto-saved progress on this device only.</p>
+  </div>
+</section>
+
+<!-- ============ MODAL: TAB SWITCH WARNING ============ -->
+<div class="modal-overlay" id="modalTabWarn">
+  <div class="modal-box">
+    <h3>⚠ FOCUS VIOLATION DETECTED</h3>
+    <p id="tabWarnText">You switched away from the challenge window. This has been logged.</p>
+    <button class="btn rose" style="width:100%;" onclick="closeTabWarn()">RETURN TO CHALLENGE</button>
+  </div>
+</div>
+
+<!-- ============ MODAL: SECRET ADMIN PIN ============ -->
+<div class="modal-overlay" id="modalPin">
+  <div class="modal-box neutral">
+    <h3>◆ ADMIN ACCESS</h3>
+    <p>Enter the 4-digit access PIN to view the live leaderboard.</p>
+    <div class="pin-input">
+      <input type="password" maxlength="1" inputmode="numeric" class="pinDigit">
+      <input type="password" maxlength="1" inputmode="numeric" class="pinDigit">
+      <input type="password" maxlength="1" inputmode="numeric" class="pinDigit">
+      <input type="password" maxlength="1" inputmode="numeric" class="pinDigit">
+    </div>
+    <div id="pinError" style="color:var(--rose); font-size:12px; margin-bottom:14px; display:none;">Incorrect PIN.</div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn ghost" style="flex:1;" onclick="closePinModal()">Cancel</button>
+      <button class="btn solid" style="flex:1;" onclick="checkPin()">Unlock</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: CONFIRM SUBMIT ============ -->
+<div class="modal-overlay" id="modalConfirm">
+  <div class="modal-box neutral">
+    <h3 id="confirmTitle">SUBMIT ROUND?</h3>
+    <p id="confirmText"></p>
+    <div style="display:flex; gap:10px;">
+      <button class="btn ghost" style="flex:1;" onclick="closeConfirm()">Review</button>
+      <button class="btn solid" style="flex:1;" id="confirmYes">Submit</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="application/json" id="cyberData">
+{
+ "meta": {
+  "event": "CyberArena: The Ultimate Digital Trust Challenge",
+  "rounds": {
+   "1": {
+    "minutes": 30,
+    "items": 30
+   },
+   "2": {
+    "minutes": 30,
+    "items": 15
+   },
+   "3": {
+    "minutes": 60,
+    "items": 5
+   }
+  }
+ },
+ "round1": [
+  {
+   "id": "r1q01",
+   "q": "Which of these best defines 'phishing'?",
+   "options": [
+    "A type of firewall configuration",
+    "A technique to compress large files",
+    "A method to speed up internet connections",
+    "Fraudulent attempt to obtain sensitive data by impersonating a trustworthy entity"
+   ],
+   "answer": 3
+  },
+  {
+   "id": "r1q02",
+   "q": "What does 'HTTPS' add to standard HTTP?",
+   "options": [
+    "Encryption via TLS/SSL",
+    "Automatic ad-blocking",
+    "Faster page loading only",
+    "Higher bandwidth"
+   ],
+   "answer": 0
+  },
+  {
+   "id": "r1q03",
+   "q": "A 'zero-day' vulnerability refers to:",
+   "options": [
+    "A flaw unknown to the vendor with no patch available",
+    "A bug fixed the same day it's found",
+    "A vulnerability that expires after 24 hours",
+    "A type of antivirus signature"
+   ],
+   "answer": 0
+  },
+  {
+   "id": "r1q04",
+   "q": "Which password is the strongest?",
+   "options": [
+    "iloveyou",
+    "qwerty",
+    "Tr0ub4dor&3xplor3!Zn",
+    "password123"
+   ],
+   "answer": 2
+  },
+  {
+   "id": "r1q05",
+   "q": "What is 'social engineering' in cybersecurity?",
+   "options": [
+    "Engineering firewalls for social media",
+    "A coding framework",
+    "Building secure social networks",
+    "Manipulating people into revealing confidential information"
+   ],
+   "answer": 3
+  },
+  {
+   "id": "r1q06",
+   "q": "Two-Factor Authentication (2FA) primarily protects against:",
+   "options": [
+    "Hardware failures",
+    "Slow internet speeds",
+    "Unauthorized access even if a password is stolen",
+    "Software bugs"
+   ],
+   "answer": 2
+  },
+  {
+   "id": "r1q07",
+   "q": "What does 'DDoS' stand for?",
+   "options": [
+    "Dynamic Data of Systems",
+    "Direct Data over SSL",
+    "Distributed Denial of Service",
+    "Dual Domain Server"
+   ],
+   "answer": 2
+  },
+  {
+   "id": "r1q08",
+   "q": "Ransomware typically:",
+   "options": [
+    "Encrypts files and demands payment for the key",
+    "Deletes browser cookies",
+    "Speeds up your computer",
+    "Improves network security"
+   ],
+   "answer": 0
+  },
+  {
+   "id": "r1q09",
+   "q": "A VPN primarily provides:",
+   "options": [
+    "Faster download speeds",
+    "An encrypted tunnel for network traffic",
+    "Free antivirus software",
+    "Unlimited cloud storage"
+   ],
+   "answer": 1
+  },
+  {
+   "id": "r1q10",
+   "q": "Which is an example of malware?",
+   "options": [
+    "CAPTCHA",
+    "Firewall",
+    "Trojan horse",
+    "VPN client"
+   ],
+   "answer": 2
+  },
+  {
+   "id": "r1q11",
+   "q": "What is a 'brute-force attack'?",
+   "options": [
+    "A social engineering tactic",
+    "Systematically trying all possible password combinations",
+    "Physically damaging a server",
+    "A DDoS variant only"
+   ],
+   "answer": 1
+  },
+  {
+   "id": "r1q12",
+   "q": "SQL Injection attacks target:",
+   "options": [
+    "Email servers exclusively",
+    "Physical hardware",
+    "Databases via malicious input in queries",
+    "Wireless routers only"
+   ],
+   "answer": 2
+  },
+  {
+   "id": "r1q13",
+   "q": "The 'CIA triad' in security stands for:",
+   "options": [
+    "Confidentiality, Integrity, Availability",
+    "Cloud, Infrastructure, Application",
+    "Cyber, Internet, Access",
+    "Control, Identity, Authentication"
+   ],
+   "answer": 0
+  },
+  {
+   "id": "r1q14",
+   "q": "A firewall's main function is to:",
+   "options": [
+    "Scan for viruses only",
+    "Store passwords securely",
+    "Encrypt all outgoing emails",
+    "Monitor and control incoming/outgoing network traffic"
+   ],
+   "answer": 3
+  },
+  {
+   "id": "r1q15",
+   "q": "What is 'spoofing'?",
+   "options": [
+    "A backup strategy",
+    "A type of encryption",
+    "Improving network speed",
+    "Disguising a communication to appear from a trusted source"
+   ],
+   "answer": 3
+  },
+  {
+   "id": "r1q16",
+   "q": "Which practice reduces risk from a data breach?",
+   "options": [
+    "Regularly updating software and patching vulnerabilities",
+    "Reusing the same password everywhere",
+    "Disabling all firewalls",
+    "Sharing credentials with colleagues"
+   ],
+   "answer": 0
+  },
+  {
+   "id": "r1q17",
+   "q": "A 'man-in-the-middle' attack involves:",
+   "options": [
+    "An attacker intercepting communication between two parties",
+    "Physically stealing a laptop",
+    "Installing antivirus software",
+    "Formatting a hard drive"
+   ],
+   "answer": 0
+  },
+  {
+   "id": "r1q18",
+   "q": "What does 'PII' stand for?",
+   "options": [
+    "Personal Internet Identity",
+    "Protected Internal Interface",
+    "Public Information Index",
+    "Personally Identifiable Information"
+   ],
+   "answer": 3
+  },
+  {
+   "id": "r1q19",
+   "q": "Which is the safest way to handle a suspicious email attachment?",
+   "options": [
+    "Reply asking for more details",
+    "Forward it to friends",
+    "Do not open it and report it to IT/security",
+    "Open it to check what it is"
+   ],
+   "answer": 2
+  },
+  {
+   "id": "r1q20",
+   "q": "What is 'encryption'?",
+   "options": [
+    "Compressing files to save space",
+    "Converting data into a coded form to prevent unauthorized access",
+    "Deleting data permanently",
+    "Backing up data to the cloud"
+   ],
+   "answer": 1
+  },
+  {
+   "id": "r1q21",
+   "q": "A 'honeypot' in cybersecurity is:",
+   "options": [
+    "A type of malware",
+    "A password manager",
+    "A decoy system to attract and detect attackers",
+    "A firewall brand"
+   ],
+   "answer": 2
+  },
+  {
+   "id": "r1q22",
+   "q": "What is the primary risk of using public Wi-Fi without a VPN?",
+   "options": [
+    "Data can be intercepted by others on the network",
+    "Slower speeds only",
+    "Higher electricity bills",
+    "Automatic virus infection"
+   ],
+   "answer": 0
+  },
+  {
+   "id": "r1q23",
+   "q": "Multi-factor authentication combines:",
+   "options": [
+    "Something you know, have, and/or are",
+    "Two passwords only",
+    "Two email addresses",
+    "Two usernames"
+   ],
+   "answer": 0
+  },
+  {
+   "id": "r1q24",
+   "q": "What does 'patch management' refer to?",
+   "options": [
+    "Systematically updating software to fix vulnerabilities",
+    "Sewing repairs for hardware",
+    "Configuring network cables",
+    "Managing employee schedules"
+   ],
+   "answer": 0
+  },
+  {
+   "id": "r1q25",
+   "q": "A 'keylogger' is malware that:",
+   "options": [
+    "Speeds up typing",
+    "Records keystrokes to steal information like passwords",
+    "Deletes files",
+    "Encrypts the hard drive"
+   ],
+   "answer": 1
+  },
+  {
+   "id": "r1q26",
+   "q": "What is the 'least privilege' principle?",
+   "options": [
+    "Sharing one account among a team",
+    "Granting users only the access necessary to perform their job",
+    "Giving all users admin access",
+    "Removing all user permissions"
+   ],
+   "answer": 1
+  },
+  {
+   "id": "r1q27",
+   "q": "Which is a sign of a phishing email?",
+   "options": [
+    "Company logo and correct spelling",
+    "Personalized greeting from a known colleague",
+    "Sent from a verified internal address",
+    "Urgent threats, generic greetings, and suspicious links"
+   ],
+   "answer": 3
+  },
+  {
+   "id": "r1q28",
+   "q": "What does 'incident response' refer to?",
+   "options": [
+    "Buying new hardware",
+    "A structured approach to handling and recovering from security breaches",
+    "Ignoring security alerts",
+    "Marketing after a breach"
+   ],
+   "answer": 1
+  },
+  {
+   "id": "r1q29",
+   "q": "Which of these is a strong practice for account security?",
+   "options": [
+    "Enabling multi-factor authentication",
+    "Using the same password across all sites",
+    "Sharing OTPs over the phone",
+    "Writing passwords on sticky notes"
+   ],
+   "answer": 0
+  },
+  {
+   "id": "r1q30",
+   "q": "What is 'digital trust'?",
+   "options": [
+    "Confidence that digital systems, data, and identities are secure and reliable",
+    "Trusting all software by default",
+    "A type of cryptocurrency",
+    "A social media metric"
+   ],
+   "answer": 0
+  }
+ ],
+ "round2": [
+  {
+   "id": "r2p01",
+   "type": "CAESAR CIPHER · Shift 3",
+   "body": "Decode this message (shift each letter back by 3):",
+   "mono": "ZDWFK RXW IRU SKLVKLQJ",
+   "answers": [
+    "watch out for phishing"
+   ]
+  },
+  {
+   "id": "r2p02",
+   "type": "SCAM DETECTION",
+   "body": "An email says: 'Your account will be suspended in 1 hour! Click here and enter your password to verify.' What single-word red flag describes this technique?",
+   "mono": null,
+   "answers": [
+    "urgency",
+    "urgent",
+    "artificial urgency",
+    "sense of urgency",
+    "time pressure"
+   ]
+  },
+  {
+   "id": "r2p03",
+   "type": "EMOJI DECODE",
+   "body": "Decode the security concept: 🔑 + 📝 + 👁️ (a word for keystroke-recording malware)",
+   "mono": "🔑📝👁️",
+   "answers": [
+    "keylogger",
+    "key logger",
+    "keylogging"
+   ]
+  },
+  {
+  "id": "r2p04",
+  "type": "ANAGRAM · Word Puzzle",
+  "body": "Unscramble these letters to reveal a core cybersecurity principle: 'E T I G N R T I Y'",
+  "mono": "E T I G N R T I Y",
+  "answers": [
+    "integrity"
+  ]
+},
+  {
+  "id": "r2p05",
+  "type": "KEYBOARD CIPHER",
+  "body": "Look at a standard QWERTY keyboard. Each letter below was typed by pressing the key immediately to the RIGHT of the real letter (e.g., A → S, E → R). Decode the hidden 6-letter word:",
+  "mono": "J S V L R T",
+  "answers": [
+    "hacker"
+   ]
+  },
+  {
+   "id": "r2p06",
+   "type": "SCAM DETECTION",
+   "body": "A caller claims to be from your 'bank's IT department' and asks for your OTP to 'verify a suspicious transaction'. What is this attack type called?",
+   "mono": null,
+   "answers": [
+    "vishing",
+    "voice phishing"
+   ]
+  },
+  {
+   "id": "r2p07",
+   "type": "EMOJI DECODE",
+   "body": "Decode the term: 🎣 + 📧 (a common online scam involving fake emails)",
+   "mono": "🎣📧",
+   "answers": [
+    "phishing",
+    "phishing email"
+   ]
+  },
+  {
+   "id": "r2p08",
+   "type": "CAESAR CIPHER · Shift 3",
+   "body": "Decode this message (shift each letter back by 3):",
+   "mono": "XVH VWURQJ SDVVZRUGV",
+   "answers": [
+    "use strong passwords"
+   ]
+  },
+  {
+   "id": "r2p09",
+   "type": "ACRONYM PUZZLE",
+   "body": "Expand this cybersecurity acronym: VPN",
+   "mono": "V P N",
+   "answers": [
+    "virtual private network"
+   ]
+  },
+  {
+   "id": "r2p10",
+   "type": "SCAM DETECTION",
+   "body": "A pop-up says 'You've won a free iPhone! Enter your card details to claim.' What is this type of scam generally called?",
+   "mono": null,
+   "answers": [
+    "prize scam",
+    "lottery scam",
+    "fake prize scam",
+    "prize",
+    "lottery",
+    "giveaway scam",
+    "reward scam"
+   ]
+  },
+  {
+   "id": "r2p11",
+   "type": "CRYPTOGRAPHY · Reverse",
+   "body": "Reverse this string to reveal the hidden phrase:",
+   "mono": "TAERHT REDISNI",
+   "answers": [
+    "insider threat"
+   ]
+  },
+  {
+   "id": "r2p12",
+   "type": "EMOJI DECODE",
+   "body": "Decode the term: 🧱 + 🔥 (protects a network by filtering traffic)",
+   "mono": "🧱🔥",
+   "answers": [
+    "firewall",
+    "fire wall"
+   ]
+  },
+  {
+   "id": "r2p13",
+   "type": "ACRONYM PUZZLE",
+   "body": "Expand this cybersecurity acronym: OTP",
+   "mono": "O T P",
+   "answers": [
+    "one time password",
+    "one-time password"
+   ]
+  },
+  {
+   "id": "r2p14",
+   "type": "SCAM DETECTION",
+   "body": "An SMS from an unknown number contains a shortened link claiming to be a 'delivery update'. This attack delivered via text message is called:",
+   "mono": null,
+   "answers": [
+    "smishing",
+    "sms phishing"
+   ]
+  },
+  {
+   "id": "r2p15",
+   "type": "CAESAR CIPHER · Shift 5",
+   "body": "Decode this message (shift each letter back by 5):",
+   "mono": "LZFWI DTZW UFXXBTWI",
+   "answers": [
+    "guard your password"
+   ]
+  }
+ ],
+ "round3": {
+  "caseTitle": "CASE FILE #4471 — CORPORATE CREDENTIAL BREACH",
+  "caseIntro": "A mid-sized fintech firm reported unauthorized fund transfers within a 48-hour window. Four pieces of evidence were recovered from the incident. Examine each — they stay pinned on screen throughout — and answer the five investigation questions below.",
+  "evidence": [
+   {
+    "id": "email",
+    "label": "Phishing Email",
+    "lines": [
+     "From: security-alert@paypa1-verify.com",
+     "To: finance.dept@corp.internal",
+     "Subject: URGENT: Account Verification Required",
+     "",
+     "Dear Valued Customer,",
+     "We detected unusual activity. Click the link below within 2 hours to avoid suspension:",
+     "hxxp://paypa1-verify.com/login?id=8827",
+     "",
+     "Regards, Security Team"
+    ],
+    "note": null
+   },
+   {
+    "id": "log",
+    "label": "Server Log",
+    "lines": [
+     "[02:14:33] Login SUCCESS user=finance01 ip=192.168.4.12",
+     "[02:14:51] Login FAILED user=admin ip=41.203.88.19 (x14)",
+     "[02:17:02] Login SUCCESS user=admin ip=41.203.88.19",
+     "[02:17:40] File access: /payroll/export_master.csv",
+     "[02:19:12] Outbound transfer initiated: $48,200 → ACC#7729-XX"
+    ],
+    "note": null
+   },
+   {
+    "id": "cipher",
+    "label": "Caesar Cipher Note",
+    "lines": [
+     "QEB XQQXZH TXP LOZEBPQOXQBA XQ 2:14XJ"
+    ],
+    "note": "Recovered from the attacker's notes. Cipher shift: -3."
+   },
+   {
+    "id": "profile",
+    "label": "Social Profile",
+    "lines": [
+     "Username: n.volkov_88",
+     "Bio: \"Pentester | Night owl | DM for 'consulting'\"",
+     "Recent post (2:05 AM): \"Finance depts never rotate admin creds. Too easy tonight 😏\""
+    ],
+    "note": null
+   }
+  ],
+  "questions": [
+   {
+    "id": "r3q1",
+    "label": "1. What IP address is associated with the attacker's successful login?",
+    "answers": [
+     "41.203.88.19"
+    ]
+   },
+   {
+    "id": "r3q2",
+    "label": "2. Decode the Caesar cipher note (shift -3). What does it say?",
+    "answers": [
+     "the attack was orchestrated at 2:14am",
+     "attack was orchestrated at 2:14am",
+     "the attack was orchestrated at 2:14 am"
+    ]
+   },
+   {
+    "id": "r3q3",
+    "label": "3. What was the initial attack vector used against the victim?",
+    "answers": [
+     "phishing email",
+     "phishing",
+     "email phishing",
+     "spear phishing",
+     "spearphishing email"
+    ]
+   },
+   {
+    "id": "r3q4",
+    "label": "4. What dollar amount was transferred out during the breach?",
+    "answers": [
+     "48200",
+     "$48,200",
+     "48,200 dollars"
+    ]
+   },
+   {
+    "id": "r3q5",
+    "label": "5. Based on the social profile, what is the suspect's username?",
+    "answers": [
+     "n.volkov_88"
+    ]
+   }
+  ]
+ }
+}
+</script>
+<script>
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const API_URL = "https://script.google.com/macros/s/AKfycbzXXkdjKyfUmXbh03nSqLhF4c53ahnCkFWsjWimzxOLxl-WmjHAwLdqi9a4O4YiKk4F5w/exec";
+const API_KEY = "";                       // must equal API_KEY in Code.gs (leave "" if you don't use one)
+const ADMIN_PIN = "2026";
+const MAX_TAB_WARNINGS = 3;               // per round
+const STORAGE_KEY = "cyberarena_session_v1";
+const PREF_KEY = "cyberarena_prefs_v1";
+const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // a saved session older than this is ignored
+const READ_SECONDS = 60;
+const ROUND_SECONDS = { 1: 30 * 60, 2: 30 * 60, 3: 60 * 60 };
+
+const $ = id => document.getElementById(id);
+const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ============================================================
+   DATASET  (embedded JSON block near the end of this page)
+   ============================================================ */
+const DATA = JSON.parse($('cyberData').textContent);
+const R1 = DATA.round1, R2 = DATA.round2, R3 = DATA.round3;
+const TOTAL_Q = R1.length + R2.length + R3.questions.length;
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function escapeHtml(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function norm(s){ return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, ''); }
+function matchesAny(input, accepted){ const n = norm(input); return n !== '' && accepted.some(a => norm(a) === n); }
+function fmtTime(t){ const m = Math.floor(t / 60), s = t % 60; return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0'); }
+function shuffle(a){ for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function caesar(s, k){ return s.replace(/[A-Z]/gi, c => { const b = c <= 'Z' ? 65 : 97; return String.fromCharCode((c.charCodeAt(0) - b + k + 260) % 26 + b); }); }
+function showToast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(showToast._t); showToast._t = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+/* safe localStorage (works even if storage is blocked, e.g. private mode) */
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v){ try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+  del(k){ try { localStorage.removeItem(k); } catch (e) {} }
+};
+let prefs = {}; try { prefs = JSON.parse(store.get(PREF_KEY) || '{}') || {}; } catch (e) { prefs = {}; }
+
+/* ============================================================
+   CYBER SOUND FX ENGINE  (Web Audio API — synthesized, no audio files)
+   ============================================================ */
+const SFX = (function(){
+  let ac = null, master = null, muted = !!prefs.muted;
+  function ctx(){
+    if (muted) return null;
+    if (!ac) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      try { ac = new AC(); master = ac.createGain(); master.gain.value = 0.6; master.connect(ac.destination); } catch (e) { return null; }
+    }
+    if (ac.state === 'suspended') ac.resume().catch(() => {});
+    return ac;
+  }
+  function tone(o){
+    const c = ctx(); if (!c) return;
+    const t0 = c.currentTime + (o.d || 0), dur = o.t || 0.1, v = o.v || 0.06;
+    const osc = c.createOscillator(), g = c.createGain();
+    osc.type = o.type || 'sine';
+    osc.frequency.setValueAtTime(o.f, t0);
+    if (o.f2) osc.frequency.exponentialRampToValueAtTime(o.f2, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(v, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g); g.connect(master);
+    osc.start(t0); osc.stop(t0 + dur + 0.03);
+  }
+  return {
+    click(){   tone({ f: 720, f2: 1100, t: 0.06, type: 'square', v: 0.025 }); },
+    flip(){    tone({ f: 420, f2: 680, t: 0.09, type: 'triangle', v: 0.06 }); },
+    match(){   tone({ f: 660, t: 0.10, v: 0.07 }); tone({ f: 990, t: 0.16, v: 0.07, d: 0.09 }); },
+    miss(){    tone({ f: 240, f2: 140, t: 0.18, type: 'sawtooth', v: 0.04 }); },
+    tick(n){   tone({ f: n <= 3 ? 1250 : 920, t: 0.07, type: 'square', v: 0.05 }); },          // 10-second warning
+    success(){ [523, 659, 784].forEach((f, i) => tone({ f, t: 0.16, v: 0.07, d: i * 0.08 })); },  // accepted submission
+    round(){   [392, 523, 659, 784, 1047].forEach((f, i) => tone({ f, t: 0.22, type: 'triangle', v: 0.07, d: i * 0.09 })); }, // round complete
+    rank(){    [659, 784, 988, 1319].forEach((f, i) => tone({ f, t: 0.14, type: 'triangle', v: 0.06, d: i * 0.07 })); },
+    warn(){    tone({ f: 190, f2: 110, t: 0.38, type: 'sawtooth', v: 0.06 }); },
+    toggleMute(){ muted = !muted; prefs.muted = muted; store.set(PREF_KEY, JSON.stringify(prefs)); return muted; },
+    isMuted(){ return muted; }
+  };
+})();
+function syncMuteIcon(){
+  const m = SFX.isMuted();
+  $('muteBtn').classList.toggle('off', m);
+  $('muteBtn').setAttribute('aria-label', m ? 'Unmute sound' : 'Mute sound');
+  $('muteBtn').querySelector('use').setAttribute('href', m ? '#i-volume-xmark' : '#i-volume-high');
+}
+function toggleMute(){ SFX.toggleMute(); syncMuteIcon(); if (!SFX.isMuted()) SFX.success(); }
+/* one delegated listener gives every button / option / card a click sound */
+document.addEventListener('click', e => {
+  const t = e.target.closest('button,.option,.step-dot,.ev-head,.game-tab,.switch');
+  if (t && !t.hasAttribute('data-silent') && t.id !== 'muteBtn') SFX.click();
+}, true);
+
+/* ============================================================
+   SESSION STATE + AUTO-SAVE  (localStorage)
+   ============================================================ */
+let S = null;                 // the live session (mirrors localStorage)
+let sessionCleared = false;   // true once the final report is submitted / admin clears
+let gameActive = false;       // anti-cheat only polices live rounds
+
+function blankSession(player){
+  return {
+    v: 1,
+    sid: 'CA' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    player,
+    round: 'INSTR',                 // 'INSTR' | 'COUNTDOWN' | 'R1' | 'R2' | 'R3' | 'WAITING'
+    instrRound: 1,
+    readEndsAt: 0,
+    waiting: null,                  // { just, next }
+    deadline: 0,                    // absolute epoch-ms when the current round timer ends
+    remainingSeconds: 0,
+    violations: 0, totalViolations: 0,
+    seq: 0, rank: 0,
+    scores: { r1: 0, r2: 0, r3: 0 },
+    r1: { idx: 0, answers: new Array(R1.length).fill(null), submitted: false },
+    r2: { idx: 0, answers: new Array(R2.length).fill(''),   submitted: false },
+    r3: { idx: 0, answers: new Array(R3.questions.length).fill(''), submitted: false, flags: [] },
+    startedAt: Date.now(), savedAt: Date.now()
+  };
+}
+function save(){
+  if (!S || sessionCleared) return;
+  S.savedAt = Date.now();
+  store.set(STORAGE_KEY, JSON.stringify(S));
+}
+function loadSession(){
+  const raw = store.get(STORAGE_KEY); if (!raw) return null;
+  try {
+    const o = JSON.parse(raw);
+    if (!o || o.v !== 1 || !o.player || !o.player.name || !o.sid) return null;
+    if (!['INSTR','COUNTDOWN','R1','R2','R3','WAITING'].includes(o.round)) return null;
+    if (Date.now() - (o.savedAt || 0) > SESSION_TTL_MS) return null;
+    if (!o.r1 || !o.r2 || !o.r3 || !o.scores) return null;
+    if (o.round === 'WAITING' && (!o.waiting || !o.waiting.just)) return null;
+    if (o.r1.answers.length !== R1.length || o.r2.answers.length !== R2.length || o.r3.answers.length !== R3.questions.length) return null;
+    if (!Array.isArray(o.r3.flags)) o.r3.flags = [];
+    return o;
+  } catch (e) { return null; }
+}
+function clearSession(){ sessionCleared = true; store.del(STORAGE_KEY); }
+
+/* ============================================================
+   RANK BADGES  (progress = questions completed across all rounds)
+   ============================================================ */
+const RANKS = [
+  { name: 'Cyber Rookie',       min: 0.00, color: '#94a3b8', icon: 'user-secret' },
+  { name: 'Net Defender',       min: 0.20, color: '#38bdf8', icon: 'shield-halved' },
+  { name: 'Forensics Expert',   min: 0.50, color: '#e056fd', icon: 'magnifying-glass' },
+  { name: 'Digital Mastermind', min: 0.90, color: '#fbbf24', icon: 'crown' }
+];
+function countCompleted(){
+  if (!S) return 0;
+  return S.r1.answers.filter(a => a !== null && a !== undefined).length
+       + S.r2.answers.filter(a => String(a).trim() !== '').length
+       + S.r3.answers.filter(a => String(a).trim() !== '').length;
+}
+function rankFor(count){ let r = 0; RANKS.forEach((k, i) => { if (count >= Math.ceil(TOTAL_Q * k.min)) r = i; }); return r; }
+function updateRank(silent){
+  if (!S) return;
+  const c = countCompleted(), r = rankFor(c), k = RANKS[r], b = $('rankBadge');
+  b.style.setProperty('--rank-c', k.color);
+  $('rankName').textContent = k.name;
+  $('rankCount').textContent = c + '/' + TOTAL_Q;
+  $('rankIcon').querySelector('use').setAttribute('href', '#i-' + k.icon);
+  b.classList.add('show');
+  if (r > (S.rank || 0) && !silent) {
+    b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
+    SFX.rank(); showToast('Rank up! You are now a ' + k.name);
+  }
+  S.rank = r;
+}
+function setHeader(){
+  const p = S.player;
+  $('playerTag').textContent = p.name + ' · ' + p.dept + ' · Yr ' + p.year;
+  $('rankBadge').classList.add('show');
+}
+
+/* ============================================================
+   SCREEN NAVIGATION  (+ Matrix Rain in the waiting room)
+   ============================================================ */
+function go(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+  window.scrollTo(0, 0);
+  if (id === 'screen-waiting') startMatrix(); else stopMatrix();
+}
+function currentScreenIs(id){ const el = $(id); return !!el && el.classList.contains('active'); }
+
+const MX = { raf: 0, last: 0, fs: 16, drops: [], chars: '01アイウエオカキクケコサシスセソ<>/{}$#%&ABCDEF'.split('') };
+function resizeMatrix(){
+  const cv = $('matrixCanvas'); cv.width = window.innerWidth; cv.height = window.innerHeight;
+  MX.drops = Array.from({ length: Math.ceil(cv.width / MX.fs) }, () => Math.floor(Math.random() * -40));
+}
+function drawMatrixFrame(){
+  const cv = $('matrixCanvas'), c = cv.getContext('2d');
+  c.fillStyle = 'rgba(8,12,20,0.10)'; c.fillRect(0, 0, cv.width, cv.height);
+  c.font = MX.fs + 'px ui-monospace, Menlo, Consolas, monospace';
+  for (let i = 0; i < MX.drops.length; i++) {
+    const y = MX.drops[i] * MX.fs;
+    if (y >= 0) {
+      const ch = MX.chars[Math.floor(Math.random() * MX.chars.length)];
+      c.fillStyle = (i % 7 === 0) ? '#38bdf8' : '#22c55e';
+      c.fillText(ch, i * MX.fs, y);
+      c.fillStyle = '#d1fae5'; c.fillText(ch, i * MX.fs, y);       // bright head
+    }
+    if (y > cv.height && Math.random() > 0.975) MX.drops[i] = 0;
+    MX.drops[i]++;
+  }
+}
+function matrixLoop(ts){
+  MX.raf = requestAnimationFrame(matrixLoop);
+  if (ts - MX.last < 55) return;
+  MX.last = ts; drawMatrixFrame();
+}
+function startMatrix(){
+  document.body.classList.add('matrix-on');
+  resizeMatrix();
+  const cv = $('matrixCanvas'); cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+  cancelAnimationFrame(MX.raf); MX.raf = 0;
+  if (reducedMotion) { for (let i = 0; i < 40; i++) drawMatrixFrame(); return; }
+  MX.raf = requestAnimationFrame(matrixLoop);
+}
+function stopMatrix(){
+  document.body.classList.remove('matrix-on');
+  cancelAnimationFrame(MX.raf); MX.raf = 0;
+}
+window.addEventListener('resize', () => { if (document.body.classList.contains('matrix-on')) resizeMatrix(); });
+
+/* ============================================================
+   MASTER ROUND TIMER  — absolute deadline, so refresh can't add time
+   ============================================================ */
+let masterIntervalId = null, masterOnExpire = null, lastPersisted = -1, lastWarn = -1;
+function remainingNow(){ return S ? Math.max(0, Math.ceil((S.deadline - Date.now()) / 1000)) : 0; }
+function startMasterTimer(seconds, onExpire){
+  S.deadline = Date.now() + seconds * 1000; save();
+  runMasterTimer(onExpire);
+}
+function runMasterTimer(onExpire){
+  clearInterval(masterIntervalId);
+  masterOnExpire = onExpire; lastPersisted = -1; lastWarn = -1;
+  masterIntervalId = setInterval(tickMaster, 500);
+  tickMaster();
+}
+function stopMasterTimer(){ clearInterval(masterIntervalId); masterIntervalId = null; masterOnExpire = null; }
+function tickMaster(){
+  if (!S) { stopMasterTimer(); return; }
+  const r = remainingNow();
+  S.remainingSeconds = r;
+  updateTimerDisplays(r);
+  if (r !== lastPersisted) { lastPersisted = r; save(); }
+  if (r > 0 && r <= 10 && r !== lastWarn) { lastWarn = r; SFX.tick(r); }      // 10-second warning beeps
+  if (r <= 0) {
+    const cb = masterOnExpire; stopMasterTimer();
+    if (cb) cb();
+  }
+}
+function updateTimerDisplays(r){
+  const t = fmtTime(r);
+  document.querySelectorAll('.roundTimerDisplay').forEach(el => { el.textContent = t; el.classList.toggle('low', r <= 60); });
+}
+
+/* ============================================================
+   ANTI-CHEATING
+   ============================================================ */
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('copy', e => e.preventDefault());
+document.addEventListener('cut', e => e.preventDefault());
+document.addEventListener('paste', e => e.preventDefault());
+document.addEventListener('selectstart', e => {
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  e.preventDefault();
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden && gameActive) registerTabViolation(); });
+window.addEventListener('blur', () => { if (gameActive) registerTabViolation(); });
+
+let lastViolationTs = 0;
+function registerTabViolation(){
+  if (!S) return;
+  const now = Date.now();
+  if (now - lastViolationTs < 1500) return;
+  lastViolationTs = now;
+  S.violations++; S.totalViolations++; save();
+  SFX.warn();
+  const box = $('modalTabWarn'), txt = $('tabWarnText');
+  if (S.violations >= MAX_TAB_WARNINGS) {
+    txt.textContent = 'Violation ' + S.violations + '/' + MAX_TAB_WARNINGS + '. Maximum warnings exceeded — this round is being auto-submitted.';
+    box.classList.add('active');
+    setTimeout(() => { box.classList.remove('active'); forceSubmitCurrentRound(); }, 2200);
+  } else {
+    txt.textContent = 'You switched away from the challenge window (' + S.violations + '/' + MAX_TAB_WARNINGS + '). At ' + MAX_TAB_WARNINGS + ' violations your round is auto-submitted.';
+    box.classList.add('active');
+  }
+}
+function closeTabWarn(){ $('modalTabWarn').classList.remove('active'); }
+function forceSubmitCurrentRound(){
+  if (!S) return;
+  if (S.round === 'R1') finalizeRound(1);
+  else if (S.round === 'R2') finalizeRound(2);
+  else if (S.round === 'R3') finalizeRound(3);
+}
+
+/* ---- secret admin shortcut: Ctrl+Shift + H + M held together ---- */
+let heldKeys = new Set();
+document.addEventListener('keydown', e => {
+  heldKeys.add(e.key.toLowerCase());
+  if (e.ctrlKey && e.shiftKey && heldKeys.has('h') && heldKeys.has('m')) { openPinModal(); heldKeys.clear(); }
+});
+document.addEventListener('keyup', e => heldKeys.delete(e.key.toLowerCase()));
+
+function openPinModal(){
+  document.querySelectorAll('.pinDigit').forEach(i => i.value = '');
+  $('pinError').style.display = 'none';
+  $('modalPin').classList.add('active');
+  const first = document.querySelector('.pinDigit');
+  setTimeout(() => first && first.focus(), 50);
+}
+function closePinModal(){ $('modalPin').classList.remove('active'); }
+document.querySelectorAll('.pinDigit').forEach((input, idx, all) => {
+  input.addEventListener('input', () => { if (input.value && idx < all.length - 1) all[idx + 1].focus(); });
+  input.addEventListener('keydown', e => { if (e.key === 'Backspace' && !input.value && idx > 0) all[idx - 1].focus(); });
+});
+function checkPin(){
+  const entered = Array.from(document.querySelectorAll('.pinDigit')).map(i => i.value).join('');
+  if (entered === ADMIN_PIN) { closePinModal(); enterAdmin(); }
+  else $('pinError').style.display = 'block';
+}
+
+/* ============================================================
+   ADMIN DASHBOARD
+   ============================================================ */
+let adminPrevScreen = 'screen-landing', autoRefreshOn = false, autoRefreshInterval = null, clearArmed = false;
+function enterAdmin(){
+  const cur = document.querySelector('.screen.active');
+  adminPrevScreen = (cur && cur.id !== 'screen-admin') ? cur.id : 'screen-landing';
+  go('screen-admin');
+  refreshLeaderboard();
+}
+function exitAdmin(){
+  if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+  autoRefreshOn = false; $('autoRefreshSwitch').classList.remove('on');
+  go(adminPrevScreen);
+}
+function toggleAutoRefresh(){
+  autoRefreshOn = !autoRefreshOn;
+  $('autoRefreshSwitch').classList.toggle('on', autoRefreshOn);
+  if (autoRefreshOn) autoRefreshInterval = setInterval(refreshLeaderboard, 5000);
+  else clearInterval(autoRefreshInterval);
+}
+/* Admin: wipe the saved session on THIS device (e.g. student PC handed to the next participant) */
+function clearLocalSession(btn){
+  const label = btn.querySelector('span');
+  if (!clearArmed) {
+    clearArmed = true; label.textContent = 'Click again to confirm';
+    setTimeout(() => { clearArmed = false; label.textContent = 'Clear saved session'; }, 4000);
+    return;
+  }
+  clearSession();
+  showToast('Saved session cleared on this device — reloading…');
+  setTimeout(() => location.reload(), 900);
+}
+async function refreshLeaderboard(){
+  const tbody = $('adminTableBody'), tag = $('adminDemoTag');
+  const configured = API_URL && !API_URL.startsWith('PASTE_');
+  let rows = [], demo = false;
+  if (configured) {
+    try {
+      const res = await fetch(API_URL + '?action=leaderboard' + (API_KEY ? '&key=' + encodeURIComponent(API_KEY) : ''), { method: 'GET' });
+      const data = await res.json();
+      rows = data.rows || [];
+    } catch (err) { demo = true; }
+  } else demo = true;
+  if (demo) rows = [
+    { name: 'A. Sharma', dept: 'CSBS', year: 'III', r1: 24, r2: 11, r3: 4, status: 'FINISHED', violations: 0 },
+    { name: 'R. Iyer',   dept: 'CSE',  year: 'II',  r1: 22, r2: 13, r3: 3, status: 'FINISHED', violations: 1 },
+    { name: 'P. Menon',  dept: 'CSBS', year: 'IV',  r1: 19, r2: 9,  r3: 2, status: 'IN PROGRESS', violations: 0 }
+  ];
+  tag.style.display = demo ? 'inline-block' : 'none';
+  tag.textContent = configured ? 'OFFLINE — SAMPLE DATA' : 'API NOT CONFIGURED — SAMPLE DATA';
+  rows.forEach(r => { r.total = (r.r1 || 0) + (r.r2 || 0) + (r.r3 || 0); });
+  rows.sort((a, b) => b.total - a.total);
+  tbody.innerHTML = rows.map((r, i) => {
+    const cls = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+    return '<tr class="' + cls + '"><td>#' + (i + 1) + '</td><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.dept) + '</td><td>' + escapeHtml(r.year) +
+      '</td><td>' + (r.r1 || 0) + '</td><td>' + (r.r2 || 0) + '</td><td>' + (r.r3 || 0) + '</td><td><b>' + r.total + '</b></td><td>' + escapeHtml(r.status || '') +
+      '</td><td>' + (r.violations || 0) + '</td></tr>';
+  }).join('');
+}
+
+/* ============================================================
+   BACKEND SYNC  (Google Apps Script — idempotent, spread + retried)
+   ============================================================ */
+function payload(status){
+  S.seq = (S.seq || 0) + 1; save();
+  return { action: 'sync', key: API_KEY, sid: S.sid, seq: S.seq, name: S.player.name, dept: S.player.dept, year: S.player.year,
+           r1: S.scores.r1, r2: S.scores.r2, r3: S.scores.r3, round: S.round, status: status || 'IN_PROGRESS',
+           violations: S.totalViolations || 0, ts: Date.now() };
+}
+/* spreadMs randomises the send time so 70 students finishing together don't hit the sheet in the same instant;
+   Code.gs also serialises writes with LockService, and stale/duplicate packets are ignored via `seq`. */
+function sendToBackend(p, tries, spreadMs){
+  if (!API_URL || API_URL.startsWith('PASTE_')) return;
+  setTimeout(() => {
+    fetch(API_URL, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(p) })
+      .catch(() => { if (tries > 1) sendToBackend(p, tries - 1, 5000); });
+  }, Math.random() * (spreadMs || 0));
+}
+function syncProgress(spreadMs, tries, status){ if (S) sendToBackend(payload(status), tries || 3, spreadMs == null ? 2500 : spreadMs); }
+
+/* ============================================================
+   REGISTRATION
+   ============================================================ */
+function submitRegistration(){
+  const name = $('regName').value.trim(), dept = $('regDept').value.trim(), year = $('regYear').value;
+  if (!name || !dept || !year) { $('regError').style.display = 'block'; return; }
+  $('regError').style.display = 'none';
+  S = blankSession({ name, dept, year });
+  sessionCleared = false;
+  save(); setHeader(); updateRank(true);
+  syncProgress(1500, 3, 'IN_PROGRESS');
+  SFX.success();
+  startRoundFlow(1);
+}
+['regName', 'regDept'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') submitRegistration(); }));
+
+/* ============================================================
+   ROUND FLOW: instructions -> 1-min read -> 3,2,1 -> live round
+   ============================================================ */
+const AUTOSAVE_RULE = 'Your progress is auto-saved on this device — if the page refreshes or closes, reopen it and you resume exactly where you were, with the timer still running.';
+const roundMeta = {
+  1: { title: 'Cyber Quiz Master', eyebrow: 'ROUND 1 / 3', rules: [
+    R1.length + ' multiple-choice questions covering cybersecurity fundamentals and digital trust.',
+    'The round timer runs for 30 minutes.',
+    'Use Next / Previous to move between questions — you may revisit and change answers.',
+    "If you submit early, you'll enter the Cyber Waiting Room with mini-games until the round timer ends — then Round 2 begins.",
+    'Switching tabs or minimizing the window is logged as a violation (' + MAX_TAB_WARNINGS + ' violations auto-submit the round).',
+    AUTOSAVE_RULE ] },
+  2: { title: 'Cyber Arcade', eyebrow: 'ROUND 2 / 3', rules: [
+    R2.length + ' puzzles: cryptography, scam detection, and emoji-decoding challenges.',
+    'Each puzzle takes a short text answer — spelling matters, but answers are not case-sensitive.',
+    'The round timer runs for 30 minutes.',
+    "If you submit early, you'll wait in the Cyber Waiting Room until Round 3 begins.",
+    AUTOSAVE_RULE ] },
+  3: { title: 'The Final Investigation — Boss Level', eyebrow: 'ROUND 3 / 3', rules: [
+    'One cyber-crime case study with four pieces of evidence, pinned at the top of the screen. Tap the flag on any card to mark it suspicious.',
+    'Answer all ' + R3.questions.length + ' investigation questions using the stepper — Previous / Next Question move between them.',
+    'You have 60 minutes for this final round.',
+    'The submit button appears on Question ' + R3.questions.length + '. There is no waiting room — submitting ends the competition immediately.',
+    AUTOSAVE_RULE ] }
+};
+let readIv = null;
+function startRoundFlow(n){
+  S.round = 'INSTR'; S.instrRound = n; S.readEndsAt = Date.now() + READ_SECONDS * 1000; S.violations = 0; S.waiting = null;
+  save();
+  showInstructions(n); runReadTimer();
+}
+function showInstructions(n){
+  const meta = roundMeta[n];
+  $('instrEyebrow').textContent = meta.eyebrow;
+  $('instrTitle').textContent = 'Round ' + n + ' — ' + meta.title;
+  $('instrList').innerHTML = meta.rules.map(r => '<li>' + escapeHtml(r) + '</li>').join('');
+  gameActive = false;
+  go('screen-instructions');
+}
+function runReadTimer(){
+  clearInterval(readIv);
+  const el = $('readTimer');
+  const tick = () => {
+    const r = Math.max(0, Math.ceil((S.readEndsAt - Date.now()) / 1000));
+    el.textContent = fmtTime(r);
+    if (r > 0 && r <= 10 && r !== runReadTimer._w) { runReadTimer._w = r; SFX.tick(r); }
+    if (r <= 0) { clearInterval(readIv); readIv = null; beginCountdown(); }
+  };
+  readIv = setInterval(tick, 500); tick();
+}
+function beginCountdown(){
+  S.round = 'COUNTDOWN'; save();
+  runCountdown(() => startRound(S.instrRound));
+}
+function runCountdown(done){
+  go('screen-countdown');
+  gameActive = false;
+  let n = 3; const el = $('countdownNum');
+  el.textContent = n; SFX.tick(n);
+  const iv = setInterval(() => {
+    n--;
+    if (n <= 0) { clearInterval(iv); el.textContent = 'GO'; SFX.success(); setTimeout(done, 500); }
+    else { el.textContent = n; SFX.tick(n); }
+  }, 900);
+}
+function startRound(n){
+  S.round = 'R' + n; S.violations = 0; S.waiting = null; save();
+  showRound(n);
+  gameActive = true;
+  startMasterTimer(ROUND_SECONDS[n], () => handleRoundExpire(n));
+}
+function showRound(n){
+  if (n === 1) { go('screen-round1'); renderR1(); }
+  if (n === 2) { go('screen-round2'); renderR2(); }
+  if (n === 3) { go('screen-round3'); initRound3UI(); }
+}
+/* fires when the shared round timer hits zero — whether the student is answering or waiting */
+function handleRoundExpire(n){
+  gameActive = false;
+  const spread = 20000;                       // everyone expires together -> spread the DB writes
+  SFX.round();
+  if (n === 1) { if (!S.r1.submitted) { showToast('Time is up — Round 1 auto-submitted.'); gradeRound1(spread); } startRoundFlow(2); }
+  else if (n === 2) { if (!S.r2.submitted) { showToast('Time is up — Round 2 auto-submitted.'); gradeRound2(spread); } startRoundFlow(3); }
+  else { if (!S.r3.submitted) { showToast('Time is up — final report auto-submitted.'); gradeRound3(spread); } finishCompetition(true); }
+}
+
+/* submit confirmation (manual submits only — timeouts / violations skip it) */
+function requestSubmit(n){
+  let unanswered;
+  if (n === 1) unanswered = S.r1.answers.filter(a => a === null || a === undefined).length;
+  else if (n === 2) unanswered = S.r2.answers.filter(a => String(a).trim() === '').length;
+  else unanswered = S.r3.answers.filter(a => String(a).trim() === '').length;
+  $('confirmTitle').textContent = n === 3 ? 'SUBMIT FINAL REPORT?' : 'SUBMIT ROUND ' + n + '?';
+  $('confirmText').textContent = (unanswered ? unanswered + (unanswered === 1 ? ' question is' : ' questions are') + ' still unanswered. ' : 'All questions answered. ') +
+    (n === 3 ? 'Submitting ends the competition immediately and cannot be undone.' : 'You cannot change your answers after submitting.');
+  $('confirmYes').onclick = () => { closeConfirm(); finalizeRound(n); };
+  $('modalConfirm').classList.add('active');
+}
+function closeConfirm(){ $('modalConfirm').classList.remove('active'); }
+function finalizeRound(n){
+  if (!S) return;
+  if (n === 1) { if (S.r1.submitted) return; gradeRound1(); SFX.success(); enterWaitingRoom(1, 2); }
+  else if (n === 2) { if (S.r2.submitted) return; gradeRound2(); SFX.success(); enterWaitingRoom(2, 3); }
+  else { if (S.r3.submitted) return; gradeRound3(8000); finishCompetition(false); }
+}
+
+/* ============================================================
+   ROUND 1 — CYBER QUIZ MASTER
+   ============================================================ */
+function renderR1(){
+  const st = S.r1, q = R1[st.idx];
+  $('r1Counter').textContent = 'Question ' + (st.idx + 1) + ' / ' + R1.length;
+  $('r1QText').textContent = q.q;
+  $('r1Progress').style.width = (st.answers.filter(a => a !== null).length / R1.length * 100) + '%';
+  $('r1Options').innerHTML = q.options.map((o, i) =>
+    '<div class="option ' + (st.answers[st.idx] === i ? 'selected' : '') + '" onclick="selectR1(' + i + ')"><span class="letter">' +
+    String.fromCharCode(65 + i) + '</span><span>' + escapeHtml(o) + '</span></div>').join('');
+  $('r1Prev').disabled = st.idx === 0;
+  $('r1Next').innerHTML = st.idx === R1.length - 1 ? 'SUBMIT ROUND →' : 'Next →';
+}
+function selectR1(i){ S.r1.answers[S.r1.idx] = i; save(); updateRank(); renderR1(); }
+function r1Nav(dir){
+  if (dir === 1 && S.r1.idx === R1.length - 1) { requestSubmit(1); return; }
+  S.r1.idx = Math.min(Math.max(S.r1.idx + dir, 0), R1.length - 1); save(); renderR1();
+}
+function gradeRound1(spread){
+  let c = 0; R1.forEach((q, i) => { if (S.r1.answers[i] === q.answer) c++; });
+  S.scores.r1 = c; S.r1.submitted = true; save();
+  syncProgress(spread == null ? 2500 : spread);
+}
+
+/* ============================================================
+   ROUND 2 — CYBER ARCADE
+   ============================================================ */
+function renderR2(){
+  const st = S.r2, p = R2[st.idx];
+  $('r2Counter').textContent = 'Puzzle ' + (st.idx + 1) + ' / ' + R2.length;
+  $('r2Progress').style.width = (st.answers.filter(a => String(a).trim() !== '').length / R2.length * 100) + '%';
+  $('r2Card').innerHTML = '<div class="ptype">' + escapeHtml(p.type) + '</div><div class="pbody">' + escapeHtml(p.body) + '</div>' +
+    (p.mono ? '<div class="mono-box">' + escapeHtml(p.mono) + '</div>' : '');
+  $('r2Answer').value = st.answers[st.idx] || '';
+  $('r2Prev').disabled = st.idx === 0;
+  $('r2Next').innerHTML = st.idx === R2.length - 1 ? 'SUBMIT ROUND →' : 'Next →';
+}
+$('r2Answer').addEventListener('input', e => {
+  if (!S || S.round !== 'R2') return;
+  S.r2.answers[S.r2.idx] = e.target.value; save(); updateRank();
+  $('r2Progress').style.width = (S.r2.answers.filter(a => String(a).trim() !== '').length / R2.length * 100) + '%';
+});
+$('r2Answer').addEventListener('keydown', e => { if (e.key === 'Enter') r2Nav(1); });
+function r2Nav(dir){
+  if (dir === 1 && S.r2.idx === R2.length - 1) { requestSubmit(2); return; }
+  S.r2.idx = Math.min(Math.max(S.r2.idx + dir, 0), R2.length - 1); save(); renderR2();
+}
+function gradeRound2(spread){
+  let c = 0; R2.forEach((p, i) => { if (matchesAny(S.r2.answers[i], p.answers)) c++; });
+  S.scores.r2 = c; S.r2.submitted = true; save();
+  syncProgress(spread == null ? 2500 : spread);
+}
+
+/* ============================================================
+   WAITING ROOM  (early finishers, rounds 1 & 2)
+   ============================================================ */
+function enterWaitingRoom(justFinished, next){
+  S.round = 'WAITING'; S.waiting = { just: justFinished, next }; gameActive = false; save();
+  showWaiting();
+  // the shared round timer keeps running; it will fire handleRoundExpire(justFinished)
+  runMasterTimer(() => handleRoundExpire(justFinished));
+}
+function showWaiting(){
+  $('waitTitle').textContent = 'Round ' + S.waiting.just + ' submitted!';
+  $('waitNextRound').textContent = S.waiting.next;
+  go('screen-waiting');
+  initMiniGame(); termReset(); switchGame('flip');
+}
+function switchGame(g){
+  document.querySelectorAll('.game-tab').forEach(t => t.classList.toggle('active', t.dataset.game === g));
+  $('pane-flip').classList.toggle('active', g === 'flip');
+  $('pane-term').classList.toggle('active', g === 'term');
+  if (g === 'term') setTimeout(() => $('termInput').focus(), 50);
+}
+
+/* ---- Mini-game 1: Cyber Encryption Flip Match ---- */
+const memorySymbols = ['🔒','🛡️','🔑','💻','🧬','📡','🐛','🕵️'];
+let miniState = { cards: [], flipped: [], matched: 0, moves: 0, lock: false };
+function initMiniGame(){
+  const deck = shuffle([...memorySymbols, ...memorySymbols].map((s, i) => ({ id: i, symbol: s })));
+  miniState = { cards: deck, flipped: [], matched: 0, moves: 0, lock: false };
+  $('miniMoves').textContent = '0'; $('miniMatches').textContent = '0';
+  renderMiniGame();
+}
+function renderMiniGame(){
+  $('miniGrid').innerHTML = miniState.cards.map((c, i) =>
+    '<div class="mcard ' + (miniState.flipped.includes(i) ? 'flipped' : '') + ' ' + (c.matched ? 'matched' : '') +
+    '" data-silent="1" onclick="flipMiniCard(' + i + ')"><span class="face">' + c.symbol + '</span><span class="back">?</span></div>').join('');
+}
+function flipMiniCard(i){
+  if (miniState.lock) return;
+  const c = miniState.cards[i];
+  if (c.matched || miniState.flipped.includes(i)) return;
+  miniState.flipped.push(i); SFX.flip(); renderMiniGame();
+  if (miniState.flipped.length === 2) {
+    miniState.moves++; $('miniMoves').textContent = miniState.moves;
+    const [a, b] = miniState.flipped;
+    if (miniState.cards[a].symbol === miniState.cards[b].symbol) {
+      miniState.cards[a].matched = miniState.cards[b].matched = true; miniState.matched++;
+      $('miniMatches').textContent = miniState.matched; miniState.flipped = [];
+      setTimeout(SFX.match, 120); renderMiniGame();
+      if (miniState.matched === memorySymbols.length) { setTimeout(SFX.success, 500); showToast('All pairs matched in ' + miniState.moves + ' moves!'); }
+    } else {
+      miniState.lock = true;
+      setTimeout(() => { SFX.miss(); miniState.flipped = []; miniState.lock = false; renderMiniGame(); }, 800);
+    }
+  }
+}
+
+/* ---- Mini-game 2: Hack The Terminal (cryptogram / word guessing) ---- */
+const TERM_WORDS = [
+  { w: 'BOTNET',   h: 'A network of hijacked devices controlled remotely' },
+  { w: 'ROOTKIT',  h: 'Stealthy malware that hides deep inside the operating system' },
+  { w: 'SPOOFING', h: 'Faking an identity or sender address' },
+  { w: 'PAYLOAD',  h: 'The part of malware that carries out the harmful action' },
+  { w: 'HASHING',  h: 'A one-way function that fingerprints data' },
+  { w: 'SANDBOX',  h: 'An isolated environment for safely running suspicious code' },
+  { w: 'EXPLOIT',  h: 'Code that abuses a vulnerability' },
+  { w: 'BACKDOOR', h: 'A hidden entry point that bypasses authentication' },
+  { w: 'WORM',     h: 'Self-replicating malware that spreads across networks' },
+  { w: 'SPYWARE',  h: 'Software that secretly gathers information about a user' },
+  { w: 'SALTING',  h: 'Adding random data to a password before it is hashed' },
+  { w: 'DARKWEB',  h: 'Hidden part of the internet reachable only with special software' }
+];
+let term = { bag: [], cur: null, shift: 0, cipher: '', tries: 6, solved: 0, revealed: [], hints: 0, busy: false };
+function termLog(text, cls){
+  const l = $('termLog'), d = document.createElement('div');
+  if (cls) d.className = cls; d.textContent = text; l.appendChild(d); l.scrollTop = l.scrollHeight;
+}
+function termMask(){ return term.cur.w.split('').map((c, i) => term.revealed.includes(i) ? c : '_').join(' '); }
+function termMeta(){ $('termTries').textContent = term.tries; $('termSolved').textContent = term.solved; }
+function termReset(){ term.bag = []; term.solved = 0; termNew(); }
+function termNew(){
+  if (!term.bag.length) term.bag = shuffle(TERM_WORDS.slice());
+  term.cur = term.bag.pop();
+  term.shift = 1 + Math.floor(Math.random() * 7);
+  term.cipher = caesar(term.cur.w, term.shift);
+  term.tries = 6; term.revealed = []; term.hints = 0; term.busy = false;
+  $('termLog').innerHTML = '';
+  termLog('> INCOMING TRANSMISSION INTERCEPTED', 'cy');
+  termLog('> CIPHERTEXT : ' + term.cipher, 'ok');
+  termLog('> CAESAR KEY : +' + term.shift + '   (decrypt by shifting every letter BACK by ' + term.shift + ')', 'ok');
+  termLog('> MASK       : ' + termMask(), 'ok');
+  termLog('> Type the decrypted word and press ENTER.  Commands: hint · skip · help', 'dim');
+  termMeta();
+}
+function termSubmit(){
+  if (term.busy) return;
+  const inp = $('termInput'), raw = inp.value.trim(); inp.value = '';
+  if (!raw) return;
+  termLog('root@arena:~$ ' + raw, 'dim');
+  const cmd = raw.toLowerCase();
+  if (cmd === 'help') { termLog('  hint  → clue (first one is free, then it costs 1 attempt and reveals a letter)', 'dim'); termLog('  skip  → give up on this word', 'dim'); termLog('  clear → clear the screen', 'dim'); return; }
+  if (cmd === 'clear') { $('termLog').innerHTML = ''; return; }
+  if (cmd === 'hint') {
+    if (term.hints === 0) { termLog('> CLUE: ' + term.cur.h, 'cy'); }
+    else { if (!termRevealLetter()) { termLog('> No more letters to reveal.', 'dim'); return; } term.tries--; termLog('> LETTER REVEALED (-1 attempt)  MASK: ' + termMask(), 'ok'); if (term.tries <= 0) return termLose(); }
+    term.hints++; termMeta(); return;
+  }
+  if (cmd === 'skip') { termLog('> SKIPPED — the word was ' + term.cur.w, 'err'); term.busy = true; setTimeout(termNew, 1400); return; }
+  const guess = raw.toUpperCase().replace(/[^A-Z]/g, '');
+  if (guess === term.cur.w) {
+    term.solved++; SFX.success();
+    termLog('> ACCESS GRANTED ✔  "' + term.cur.w + '" decrypted.', 'ok');
+    term.busy = true; termMeta(); setTimeout(termNew, 1600);
+  } else {
+    term.tries--; SFX.miss(); termRevealLetter();
+    termLog('> ACCESS DENIED ✖  ' + term.tries + ' attempt' + (term.tries === 1 ? '' : 's') + ' left   MASK: ' + termMask(), 'err');
+    termMeta();
+    if (term.tries <= 0) termLose();
+  }
+}
+function termRevealLetter(){
+  const open = []; term.cur.w.split('').forEach((c, i) => { if (!term.revealed.includes(i)) open.push(i); });
+  if (open.length <= 1) return false;               // always keep at least one letter hidden
+  term.revealed.push(open[Math.floor(Math.random() * open.length)]); return true;
+}
+function termLose(){
+  termLog('> SYSTEM LOCKED. The password was ' + term.cur.w, 'err');
+  term.busy = true; termMeta(); setTimeout(termNew, 2000);
+}
+$('termInput').addEventListener('keydown', e => { if (e.key === 'Enter') termSubmit(); });
+
+/* ============================================================
+   ROUND 3 — THE FINAL INVESTIGATION (evidence cards + stepper)
+   ============================================================ */
+function initRound3UI(){
+  $('r3CaseTitle').textContent = R3.caseTitle;
+  $('r3CaseIntro').textContent = R3.caseIntro;
+  renderEvidence(); renderR3Stepper(); renderR3Field();
+}
+function renderEvidence(){
+  $('evidenceGrid').innerHTML = R3.evidence.map((e, i) => {
+    const flagged = S.r3.flags.includes(e.id);
+    return '<div class="ev-card ' + (flagged ? 'flagged' : '') + '" id="evc-' + e.id + '">' +
+      '<div class="ev-head" onclick="toggleEvidence(\'' + e.id + '\')">' +
+        '<span class="ev-num">EV-' + String(i + 1).padStart(2, '0') + '</span><span class="ev-title">' + escapeHtml(e.label) + '</span>' +
+        '<button class="ev-flag ' + (flagged ? 'on' : '') + '" title="Flag as suspicious" aria-label="Flag as suspicious" onclick="event.stopPropagation();flagEvidence(\'' + e.id + '\')">' +
+          '<i class="ico"><svg viewBox="0 0 448 512" aria-hidden="true"><use href="#i-flag"/></svg></i></button>' +
+        '<i class="ico ev-chev"><svg viewBox="0 0 512 512" aria-hidden="true"><use href="#i-chevron-down"/></svg></i>' +
+      '</div>' +
+      '<div class="ev-body"><div class="mono-box">' + e.lines.map(escapeHtml).join('<br>') + '</div>' +
+      (e.note ? '<p class="ev-note">' + escapeHtml(e.note) + '</p>' : '') + '</div></div>';
+  }).join('');
+}
+function toggleEvidence(id){ $('evc-' + id).classList.toggle('collapsed'); }
+function flagEvidence(id){
+  const f = S.r3.flags, i = f.indexOf(id);
+  if (i >= 0) f.splice(i, 1); else f.push(id);
+  save();
+  const on = f.includes(id);
+  $('evc-' + id).classList.toggle('flagged', on);
+  $('evc-' + id).querySelector('.ev-flag').classList.toggle('on', on);
+}
+function renderR3Stepper(){
+  $('r3Stepper').innerHTML = R3.questions.map((f, i) =>
+    '<div class="step-dot ' + (i === S.r3.idx ? 'current' : '') + ' ' + (String(S.r3.answers[i]).trim() ? 'answered' : '') + '" onclick="jumpR3(' + i + ')">Q' + (i + 1) + '</div>').join('');
+}
+function jumpR3(i){ S.r3.idx = i; save(); renderR3Stepper(); renderR3Field(); }
+function renderR3Field(){
+  const f = R3.questions[S.r3.idx];
+  $('r3FieldSlot').innerHTML = '<div class="field"><label>' + escapeHtml(f.label) + '</label>' +
+    '<input type="text" id="r3Input" autocomplete="off" value="' + escapeHtml(S.r3.answers[S.r3.idx]) + '" oninput="r3Type(this.value)"></div>';
+  const last = S.r3.idx === R3.questions.length - 1;
+  $('r3Prev').style.display = S.r3.idx === 0 ? 'none' : 'inline-flex';
+  $('r3Next').style.display = last ? 'none' : 'inline-flex';
+  $('r3Submit').style.display = last ? 'inline-flex' : 'none';           // submit ONLY on the final question
+}
+function r3Type(v){
+  S.r3.answers[S.r3.idx] = v; save(); updateRank();
+  const dot = $('r3Stepper').children[S.r3.idx];
+  if (dot) dot.classList.toggle('answered', v.trim() !== '');
+}
+function r3Nav(dir){
+  S.r3.idx = Math.min(Math.max(S.r3.idx + dir, 0), R3.questions.length - 1); save();
+  renderR3Stepper(); renderR3Field();
+}
+function gradeRound3(spread){
+  let c = 0; R3.questions.forEach((q, i) => { if (matchesAny(S.r3.answers[i], q.answers)) c++; });
+  S.scores.r3 = c; S.r3.submitted = true; save();
+  // the final FINISHED packet is sent by finishCompetition()
+}
+
+/* ============================================================
+   FINISH  — final sync, then clear the saved session
+   ============================================================ */
+function finishCompetition(expired){
+  stopMasterTimer(); gameActive = false;
+  updateRank(true);
+  const rankName = RANKS[rankFor(countCompleted())].name;
+  const s = S.scores;
+  $('resR1').textContent = s.r1; $('resR2').textContent = s.r2; $('resR3').textContent = s.r3;
+  $('resultsScore').textContent = s.r1 + s.r2 + s.r3;
+  $('resRank').textContent = 'FINAL RANK · ' + rankName.toUpperCase();
+  // FINISHED packet: spread + 4 tries (idempotent on the server thanks to `seq`)
+  syncProgress(expired ? 20000 : 8000, 4, 'FINISHED');
+  clearSession();                          // ONLY here (or via Admin) is the saved session removed
+  SFX.round();
+  go('screen-results');
+}
+
+/* ============================================================
+   BOOT — restore a saved session if there is one
+   ============================================================ */
+function restoreSession(){
+  const o = loadSession();
+  if (!o) { if (store.get(STORAGE_KEY)) store.del(STORAGE_KEY); return false; }
+  S = o; sessionCleared = false;
+  setHeader(); updateRank(true);
+  const welcome = 'Session restored — welcome back, ' + S.player.name + '. Your timer kept running.';
+  switch (S.round) {
+    case 'INSTR':
+      if (Date.now() >= S.readEndsAt) beginCountdown();
+      else { showInstructions(S.instrRound); runReadTimer(); }
+      break;
+    case 'COUNTDOWN': beginCountdown(); break;
+    case 'R1': case 'R2': case 'R3': {
+      const n = Number(S.round[1]);
+      if (remainingNow() <= 0) handleRoundExpire(n);
+      else { showRound(n); gameActive = true; runMasterTimer(() => handleRoundExpire(n)); }
+      break;
+    }
+    case 'WAITING': {
+      const j = S.waiting.just;
+      if (remainingNow() <= 0) handleRoundExpire(j);
+      else { showWaiting(); runMasterTimer(() => handleRoundExpire(j)); }
+      break;
+    }
+  }
+  showToast(welcome);
+  return true;
+}
+syncMuteIcon();
+restoreSession();
+
+</script>
+<script>
+/* ============================================================
+   CYBER PARTICLE BACKGROUND (from Landing page design)
+   ============================================================ */
+(function(){
+  const canvas = document.getElementById('cyberCanvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const particleCount = 65;
+  let particles = [];
+
+  function resizeCanvas(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  class Particle{
+    constructor(){
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.vx = (Math.random() - 0.5) * 1.2;
+      this.vy = (Math.random() - 0.5) * 1.2;
+      this.radius = Math.random() * 2 + 1;
+      this.color = Math.random() > 0.3 ? '#38bdf8' : '#e056fd';
+    }
+    update(){
+      this.x += this.vx; this.y += this.vy;
+      if(this.x < 0 || this.x > canvas.width) this.vx *= -1;
+      if(this.y < 0 || this.y > canvas.height) this.vy *= -1;
+    }
+    draw(){
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = this.color;
+      ctx.fill();
+    }
+  }
+  for(let i = 0; i < particleCount; i++) particles.push(new Particle());
+
+  function animate(){
+    if(document.body.classList.contains('matrix-on')){ if(!reduce) requestAnimationFrame(animate); return; }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for(let i = 0; i < particles.length; i++){
+      for(let j = i + 1; j < particles.length; j++){
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if(dist < 130){
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(56, 189, 248, ${1 - dist / 130})`;
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+        }
+      }
+    }
+    particles.forEach(p => { if(!reduce) p.update(); p.draw(); });
+    if(!reduce) requestAnimationFrame(animate);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>
