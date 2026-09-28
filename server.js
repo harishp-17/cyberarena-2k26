@@ -11,6 +11,140 @@ const crypto = require('crypto');
 
 const PORT = process.env.PORT || 8000;
 const ROOT_DIR = path.resolve(__dirname);
+const GOOGLE_DATABASE_URL = process.env.DATABASE_URL || 'https://script.google.com/macros/s/AKfycbzXXkdjKyfUmXbh03nSqLhF4c53ahnCkFWsjWimzxOLxl-WmjHAwLdqi9a4O4YiKk4F5w/exec';
+
+// Question Model Schema & Dataset Validation
+const { QuestionSchema, validateQuestionsDataset } = require('./models/Question');
+let questionsDataset = null;
+try {
+  questionsDataset = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'scratch', 'cyber_data.json'), 'utf8'));
+  const report = validateQuestionsDataset(questionsDataset);
+  if (report.valid) {
+    console.log(`[QUESTION_DB]: Loaded and validated ${report.totalQuestions} questions with two-tiered clues.`);
+  } else {
+    console.warn(`[QUESTION_DB_WARN]: Question schema errors:`, report.errors);
+  }
+} catch (e) {
+  console.warn(`[QUESTION_DB_WARN]: Could not load cyber_data.json:`, e.message);
+}
+
+function getQuestionClue(qId, tier = 1) {
+  if (!questionsDataset || !qId) return null;
+  let q = null;
+  if (qId.startsWith('R1_Q')) {
+    const idx = parseInt(qId.replace('R1_Q', '')) - 1;
+    q = questionsDataset.round1 && questionsDataset.round1[idx];
+  } else if (qId.startsWith('R2_P')) {
+    const idx = parseInt(qId.replace('R2_P', '')) - 1;
+    q = questionsDataset.round2 && questionsDataset.round2[idx];
+  } else if (qId.startsWith('R3_Q')) {
+    const idx = parseInt(qId.replace('R3_Q', '')) - 1;
+    const r3q = questionsDataset.round3 && (questionsDataset.round3.questions || questionsDataset.round3);
+    q = r3q && r3q[idx];
+  }
+  if (!q || !q.clues) return null;
+  return Number(tier) === 2 ? q.clues.level_2 : q.clues.level_1;
+}
+
+// Google Apps Script Cloud Database Sync
+async function syncCandidateToGoogleDb(session) {
+  if (!GOOGLE_DATABASE_URL) return;
+  try {
+    const strikes = session.strikes != null ? Number(session.strikes) : (session.violations != null ? Number(session.violations) : (session.strikes_count != null ? Number(session.strikes_count) : 0));
+    const score = session.score != null ? Number(session.score) : ((session.r1 || 0) + (session.r2 || 0) + (session.r3 || 0) + (session.bonus || 0));
+    const payload = {
+      sid: session.sid || session.candidateId,
+      name: session.name || session.candidateName,
+      dept: session.dept || 'CSBS',
+      year: session.year || 'III',
+      r1: session.r1 || 0,
+      r2: session.r2 || 0,
+      r3: session.r3 || 0,
+      bonus: session.bonus || 0,
+      score: score,
+      total: score,
+      status: session.status || 'ONLINE',
+      violations: strikes,
+      strikes: strikes,
+      durationSeconds: session.durationSeconds || 0,
+      accuracy_rate: session.accuracy_rate || 0
+    };
+    const res = await fetch(GOOGLE_DATABASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    const resJson = await res.json().catch(() => null);
+    console.log(`[GOOGLE_DB_SYNC]: Synced candidate ${payload.sid} ->`, resJson ? resJson.success : 'ok');
+  } catch(err) {
+    console.warn(`[GOOGLE_DB_SYNC_WARN]: Failed to sync ${session.sid}:`, err.message);
+  }
+}
+
+async function syncCandidateDeletionToGoogleDb(sid) {
+  if (!GOOGLE_DATABASE_URL || !sid) return;
+  try {
+    const payload = {
+      action: 'delete',
+      sid: sid,
+      candidateId: sid
+    };
+    await fetch(GOOGLE_DATABASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).catch(() => null);
+    console.log(`[GOOGLE_DB_SYNC]: Synced deletion for candidate ${sid}`);
+  } catch (err) {
+    console.warn(`[GOOGLE_DB_SYNC_WARN]: Failed to sync deletion of ${sid}:`, err.message);
+  }
+}
+
+async function loadFromGoogleDb() {
+  if (!GOOGLE_DATABASE_URL) return;
+  try {
+    const res = await fetch(`${GOOGLE_DATABASE_URL}?action=leaderboard`);
+    const data = await res.json();
+    if (data && data.success && Array.isArray(data.rows)) {
+      console.log(`[GOOGLE_DB_SYNC]: Hydrated ${data.rows.length} candidates from Google Apps Script DB`);
+      for (const r of data.rows) {
+        if (!r.sid) continue;
+        if (!liveSessions.has(r.sid)) {
+          const strikes = Number(r.strikes || r.violations || 0);
+          const score = Number(r.total || r.score || ((r.r1||0)+(r.r2||0)+(r.r3||0)) || 0);
+          const isLocked = !!(r.is_locked || r.isLocked || strikes >= 3 || r.status === 'LOCKED');
+          liveSessions.set(r.sid, {
+            sid: r.sid,
+            candidateId: r.sid,
+            name: r.name || 'Anonymous Operative',
+            dept: r.dept || 'CSBS',
+            year: r.year || 'III',
+            r1: Number(r.r1) || 0,
+            r2: Number(r.r2) || 0,
+            r3: Number(r.r3) || 0,
+            bonus: Number(r.bonus) || 0,
+            score: score,
+            total: score,
+            violations: strikes,
+            strikes: strikes,
+            strikes_count: strikes,
+            is_locked: isLocked,
+            isLocked: isLocked,
+            status: r.status || (isLocked ? 'LOCKED' : 'ONLINE'),
+            durationSeconds: Number(r.durationSeconds) || 0,
+            accuracy_rate: Number(r.accuracy_rate) || 0,
+            lastSeen: Date.now(),
+            isSim: !!r.isSim
+          });
+        }
+      }
+      recalculateLeaderboard();
+      broadcastToProctors('LEADERBOARD_UPDATED', { leaderboard: leaderboardCache });
+    }
+  } catch(err) {
+    console.warn('[GOOGLE_DB_SYNC_WARN]: Failed to hydrate from Google DB:', err.message);
+  }
+}
 
 // In-Memory Real-Time Stores
 const liveSessions = new Map(); // candidateId -> sessionObj
@@ -539,23 +673,85 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 1b. Debug Validation Endpoint for Raw Database Operatives Sync Parity
+  if (pathname === '/api/debug/sync-check' && req.method === 'GET') {
+    const list = Array.from(liveSessions.values()).map(s => {
+      const strikes = s.strikes != null ? Number(s.strikes) : (s.violations != null ? Number(s.violations) : (s.strikes_count != null ? Number(s.strikes_count) : 0));
+      const score = s.score != null ? Number(s.score) : 0;
+      const isLocked = !!(s.isLocked || s.is_locked || strikes >= 3 || s.status === 'LOCKED');
+      return {
+        sid: s.sid || s.candidateId,
+        candidateId: s.sid || s.candidateId,
+        name: s.name || 'Anonymous Operative',
+        dept: s.dept || 'CSBS',
+        year: s.year || 'III',
+        score: score,
+        strikes: strikes,
+        violations: strikes,
+        strikes_count: strikes,
+        status: s.status || (isLocked ? 'LOCKED' : 'ONLINE'),
+        isLocked: isLocked,
+        is_locked: isLocked,
+        lastSeen: Number(s.lastSeen) || Date.now()
+      };
+    });
+
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    res.end(JSON.stringify({
+      success: true,
+      timestamp: Date.now(),
+      count: list.length,
+      operatives: list,
+      sessions: list
+    }));
+    return;
+  }
+
   // 2. Fetch All Live Sessions (Immediate Proctor Mount/Refresh)
-  if (pathname === '/api/sessions/live' && req.method === 'GET') {
-    const list = Array.from(liveSessions.values());
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true, count: list.length, sessions: list, timestamp: Date.now() }));
+  if ((pathname === '/api/sessions/live' || pathname === '/api/candidates' || pathname === '/api/participants') && req.method === 'GET') {
+    const list = Array.from(liveSessions.values()).map(s => {
+      const strikes = s.strikes != null ? Number(s.strikes) : (s.violations != null ? Number(s.violations) : (s.strikes_count != null ? Number(s.strikes_count) : 0));
+      const score = s.score != null ? Number(s.score) : 0;
+      const isLocked = !!(s.isLocked || s.is_locked || strikes >= 3 || s.status === 'LOCKED');
+      return {
+        ...s,
+        score,
+        strikes,
+        violations: strikes,
+        strikes_count: strikes,
+        isLocked,
+        is_locked: isLocked,
+        status: s.status || (isLocked ? 'LOCKED' : 'ONLINE')
+      };
+    });
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    res.end(JSON.stringify({ success: true, count: list.length, sessions: list, candidates: list, timestamp: Date.now() }));
     return;
   }
 
   // 3. Register Candidate Handshake
-  if (pathname === '/api/sessions/register' && req.method === 'POST') {
+  if ((pathname === '/api/sessions/register' || pathname === '/api/register' || pathname === '/api/candidate/register' || pathname === '/api/candidates/register') && req.method === 'POST') {
     try {
       const data = await parseJsonBody(req);
       const sid = data.candidateId || data.sid || ('CA' + Date.now().toString(36));
       const now = Date.now();
+      const strikes = data.strikes != null ? Number(data.strikes) : (data.strikes_count != null ? Number(data.strikes_count) : (data.violations != null ? Number(data.violations) : 0));
+      const score = data.score != null ? Number(data.score) : 0;
+      const isLocked = !!(data.is_locked || data.isLocked || strikes >= 3);
 
       const session = {
         sid: sid,
+        candidateId: sid,
         name: data.candidateName || data.name || 'Anonymous Operative',
         dept: data.dept || 'CSBS',
         year: data.year || 'III',
@@ -565,34 +761,53 @@ const server = http.createServer(async (req, res) => {
         qOptions: data.qOptions || [],
         selectedOptionIdx: data.selectedOptionIdx != null ? data.selectedOptionIdx : null,
         inputText: data.inputText || '',
-        score: data.score || 0,
-        r1: data.r1 || 0,
-        r2: data.r2 || 0,
-        r3: data.r3 || 0,
-        bonus: data.bonus || 0,
-        violations: data.violations || 0,
-        strikes_count: data.strikes_count || 0,
-        lifetime_violations: data.lifetime_violations || 0,
-        is_locked: !!data.is_locked,
-        lock_reason: data.lock_reason || '',
+        score: score,
+        strikes: strikes,
+        violations: strikes,
+        strikes_count: strikes,
+        r1: data.r1 != null ? Number(data.r1) : 0,
+        r2: data.r2 != null ? Number(data.r2) : 0,
+        r3: data.r3 != null ? Number(data.r3) : 0,
+        bonus: data.bonus != null ? Number(data.bonus) : 0,
+        lifetime_violations: data.lifetime_violations != null ? Number(data.lifetime_violations) : 0,
+        is_locked: isLocked,
+        isLocked: isLocked,
+        lock_reason: data.lock_reason || (isLocked ? '3/3 focus violations' : ''),
         pardon_history: data.pardon_history || [],
         isTabHidden: !!data.isTabHidden,
         lastSeen: now,
-        status: data.status || 'IN_PROGRESS',
+        status: data.status || (isLocked ? 'LOCKED' : 'ONLINE'),
         isSim: false,
-        durationSeconds: data.durationSeconds || 0,
-        accuracy_rate: data.accuracy_rate || 0,
+        durationSeconds: data.durationSeconds != null ? Number(data.durationSeconds) : 0,
+        accuracy_rate: data.accuracy_rate != null ? Number(data.accuracy_rate) : 0,
         history: [{ time: now, desc: 'Candidate authenticated · Entered Arena' }]
       };
 
+      // In-Memory Database Save
       liveSessions.set(sid, session);
       recalculateLeaderboard();
 
-      // Broadcast immediate handshake to all proctors
+      // Dual Cloud Database Sync (Google Apps Script Web App)
+      syncCandidateToGoogleDb(session);
+
+      // Broadcast immediate real-time emissions specifically targeting proctors
+      const broadcastPayload = {
+        candidate: session,
+        newCandidate: session,
+        session: session,
+        sid: session.sid,
+        timestamp: now
+      };
+      broadcastToProctors('CANDIDATE_REGISTERED', broadcastPayload);
       broadcastToProctors('PARTICIPANT_REGISTERED', session);
 
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, sid, session }));
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
+      res.end(JSON.stringify({ success: true, sid, session, candidate: session }));
     } catch (err) {
       console.error('[SURVEILLANCE_PIPE_ERROR]: Registration error:', err);
       res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -657,14 +872,29 @@ const server = http.createServer(async (req, res) => {
       }
       if (session) {
         session.isTabHidden = !!data.isTabHidden;
-        if (data.violations != null) {
-          session.violations = Number(data.violations);
-          session.strikes_count = Number(data.violations);
+        if (data.violations != null || data.strikes != null) {
+          const val = Number(data.strikes != null ? data.strikes : data.violations);
+          session.violations = val;
+          session.strikes = val;
+          session.strikes_count = val;
         } else if (session.isTabHidden) {
-          session.violations = Math.max(session.violations || 0, 1);
-          session.strikes_count = session.violations;
+          const val = Math.max(session.strikes || session.violations || 0, 1);
+          session.violations = val;
+          session.strikes = val;
+          session.strikes_count = val;
         }
-        if (data.is_locked != null) session.is_locked = data.is_locked;
+        if (session.strikes >= 3) {
+          session.is_locked = true;
+          session.isLocked = true;
+          session.status = 'LOCKED';
+          session.lock_reason = session.lock_reason || '3/3 focus violations';
+        }
+        if (data.is_locked != null || data.isLocked != null) {
+          const lk = !!(data.is_locked || data.isLocked);
+          session.is_locked = lk;
+          session.isLocked = lk;
+          if (lk) session.status = 'LOCKED';
+        }
         if (data.lock_reason) session.lock_reason = data.lock_reason;
         session.lastViolationTime = Date.now();
         session.lastSeen = Date.now();
@@ -705,14 +935,16 @@ const server = http.createServer(async (req, res) => {
         time: Date.now(),
         proctorPin: data.adminPin || '0769',
         reason: data.reason || 'Proctor administrative pardon granted',
-        strikesBefore: session.violations || session.strikes_count || 3
+        strikesBefore: session.strikes || session.violations || session.strikes_count || 3
       };
 
       session.is_locked = false;
+      session.isLocked = false;
       session.lock_reason = '';
       session.violations = 0;
+      session.strikes = 0;
       session.strikes_count = 0;
-      session.status = 'IN_PROGRESS';
+      session.status = 'ONLINE';
       session.pardon_history = session.pardon_history || [];
       session.pardon_history.push(pardonEntry);
       session.history = session.history || [];
@@ -734,11 +966,132 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 6b. Participant / Session Deletion Controller (DELETE /api/participants/:id)
+  const isDeleteParticipantRoute =
+    (req.method === 'DELETE' && (pathname.startsWith('/api/participants/') || pathname.startsWith('/api/sessions/'))) ||
+    (req.method === 'DELETE' && (pathname === '/api/participants' || pathname === '/api/sessions')) ||
+    (req.method === 'POST' && (pathname === '/api/participants/delete' || pathname === '/api/sessions/delete'));
+
+  if (isDeleteParticipantRoute) {
+    try {
+      let targetId = '';
+      if (pathname.startsWith('/api/participants/')) {
+        targetId = decodeURIComponent(pathname.replace('/api/participants/', '').trim());
+      } else if (pathname.startsWith('/api/sessions/')) {
+        targetId = decodeURIComponent(pathname.replace('/api/sessions/', '').trim());
+      }
+
+      if (!targetId || targetId === 'delete') {
+        targetId = parsedUrl.searchParams.get('id') || parsedUrl.searchParams.get('userId') || parsedUrl.searchParams.get('sid') || '';
+      }
+
+      if (!targetId) {
+        const body = await parseJsonBody(req).catch(() => ({}));
+        targetId = body.id || body.userId || body.candidateId || body.sid || '';
+      }
+
+      if (!targetId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Missing participant / user ID to delete' }));
+        return;
+      }
+
+      const deletedUserId = targetId;
+      const existedInDb = liveSessions.has(deletedUserId);
+      const deletedSession = liveSessions.get(deletedUserId);
+
+      // 1. Delete from in-memory database
+      liveSessions.delete(deletedUserId);
+
+      // 2. Clean up associated hint requests
+      for (const [reqId, hint] of hintRequests.entries()) {
+        if (hint.sid === deletedUserId || hint.candidateId === deletedUserId) {
+          hintRequests.delete(reqId);
+        }
+      }
+
+      // 3. Recalculate leaderboard
+      recalculateLeaderboard();
+
+      // 4. Terminate candidate WebSocket connection if active
+      if (socketRooms.candidates.has(deletedUserId)) {
+        const sockets = socketRooms.candidates.get(deletedUserId);
+        for (const sock of sockets) {
+          try {
+            sendWsFrame(sock, JSON.stringify({ type: 'TERMINAL_SESSION_TERMINATED', message: 'Candidate account deleted by administrator.' }));
+            sock.destroy();
+          } catch(e) {}
+        }
+        socketRooms.candidates.delete(deletedUserId);
+      }
+
+      // 5. Cloud Database sync
+      syncCandidateDeletionToGoogleDb(deletedUserId);
+
+      // 6. Real-Time Emission to admin room containing deleted user's unique ID
+      const deletionPayload = {
+        userId: deletedUserId,
+        candidateId: deletedUserId,
+        sid: deletedUserId,
+        name: deletedSession?.name || deletedUserId,
+        deletedAt: Date.now()
+      };
+
+      // io.to('admin_room').emit('CANDIDATE_DELETED', { userId: deletedUserId });
+      broadcastToProctors('CANDIDATE_DELETED', deletionPayload);
+
+      console.log(`[PARTICIPANT_DELETED]: Removed candidate ${deletedUserId} and broadcasted CANDIDATE_DELETED to admin room`);
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        message: `Candidate ${deletedUserId} deleted successfully`,
+        userId: deletedUserId,
+        existed: existedInDb
+      }));
+    } catch (err) {
+      console.error('[SURVEILLANCE_PIPE_ERROR]: Delete error:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+    }
+    return;
+  }
+
+  // Questions Schema & Dataset API
+  if (pathname === '/api/questions/schema' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      success: true,
+      schema: QuestionSchema,
+      description: "Mandatory two-tiered plain-text clue system: level_1 (conceptual nudge), level_2 (direct walkthrough)"
+    }));
+    return;
+  }
+
+  if (pathname === '/api/questions' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      success: true,
+      data: questionsDataset,
+      totalQuestions: (questionsDataset?.round1?.length || 0) + (questionsDataset?.round2?.length || 0) + (questionsDataset?.round3?.questions?.length || 0)
+    }));
+    return;
+  }
+
   // 7. Clue Request & Dispatch Endpoints
+  if ((pathname === '/api/clues/pending' || pathname === '/api/clues/requests') && req.method === 'GET') {
+    const list = Array.from(hintRequests.values());
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, count: list.length, clues: list, hints: list }));
+    return;
+  }
+
   if (pathname === '/api/clues/request' && req.method === 'POST') {
     try {
       const data = await parseJsonBody(req);
       const reqId = data.id || ('req_' + Date.now().toString(36));
+      const tier = Number(data.tier || 1);
+      const suggested = getQuestionClue(data.qId, tier) || '';
       const hintObj = {
         id: reqId,
         sid: data.candidateId || data.sid,
@@ -748,10 +1101,11 @@ const server = http.createServer(async (req, res) => {
         round: data.round || 'Round 1',
         qId: data.qId,
         qLabel: data.qLabel,
-        tier: data.tier || 1,
+        tier: tier,
         cost: data.cost || 10,
         status: 'PENDING',
-        hintText: '',
+        suggestedClue: suggested,
+        hintText: data.hintText || suggested,
         time: Date.now()
       };
 
@@ -781,7 +1135,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       hint.status = data.action === 'grant' ? 'GRANTED' : 'REJECTED';
-      hint.hintText = data.hintText || '';
+      hint.hintText = data.hintText || (data.action === 'grant' ? (getQuestionClue(hint.qId, hint.tier) || 'Clue Approved') : '');
       hint.resolvedAt = Date.now();
 
       // Dispatch to candidate
@@ -820,6 +1174,9 @@ const server = http.createServer(async (req, res) => {
 
       liveSessions.set(sid, updated);
       recalculateLeaderboard();
+
+      // Dual Cloud Database Sync (Google Apps Script Web App)
+      syncCandidateToGoogleDb(updated);
 
       broadcastToProctors('TEST_SUBMITTED', updated);
       broadcastToProctors('LEADERBOARD_UPDATED', { leaderboard: leaderboardCache });
@@ -980,22 +1337,51 @@ server.on('upgrade', (req, socket, head) => {
               data: { sessions: allSessions, hints: allHints, count: allSessions.length },
               timestamp: Date.now()
             }));
-          } else if (msg.type === 'JOIN_CANDIDATE') {
-            clientSid = msg.data.candidateId || msg.data.sid;
+          } else if (msg.type === 'JOIN_CANDIDATE' || msg.type === 'CANDIDATE_REGISTERED') {
+            const candidateData = msg.data || msg.candidate || msg;
+            clientSid = candidateData.candidateId || candidateData.sid || ('CA' + Date.now().toString(36));
             if (!socketRooms.candidates.has(clientSid)) {
               socketRooms.candidates.set(clientSid, new Set());
             }
             socketRooms.candidates.get(clientSid).add(socket);
 
             // Save session and notify proctors
+            const now = Date.now();
+            const existing = liveSessions.get(clientSid) || {};
+            const strikes = candidateData.strikes != null ? Number(candidateData.strikes) : (candidateData.violations != null ? Number(candidateData.violations) : (candidateData.strikes_count != null ? Number(candidateData.strikes_count) : (existing.strikes != null ? Number(existing.strikes) : (existing.violations != null ? Number(existing.violations) : 0))));
+            const score = candidateData.score != null ? Number(candidateData.score) : (existing.score != null ? Number(existing.score) : 0);
+            const isLocked = !!(candidateData.is_locked || candidateData.isLocked || existing.is_locked || existing.isLocked || strikes >= 3);
             const candidateSession = {
-              ...(liveSessions.get(clientSid) || {}),
-              ...msg.data,
+              ...existing,
+              ...candidateData,
               sid: clientSid,
-              lastSeen: Date.now(),
-              status: msg.data.status || 'IN_PROGRESS'
+              candidateId: clientSid,
+              name: candidateData.candidateName || candidateData.name || existing.name || 'Anonymous Operative',
+              dept: candidateData.dept || existing.dept || 'CSBS',
+              year: candidateData.year || existing.year || 'III',
+              score: score,
+              strikes: strikes,
+              violations: strikes,
+              strikes_count: strikes,
+              is_locked: isLocked,
+              isLocked: isLocked,
+              lastSeen: now,
+              status: candidateData.status || existing.status || (isLocked ? 'LOCKED' : 'ONLINE')
             };
             liveSessions.set(clientSid, candidateSession);
+            recalculateLeaderboard();
+
+            // Dual Cloud Database Sync (Google Apps Script Web App)
+            syncCandidateToGoogleDb(candidateSession);
+
+            const broadcastPayload = {
+              candidate: candidateSession,
+              newCandidate: candidateSession,
+              session: candidateSession,
+              sid: clientSid,
+              timestamp: now
+            };
+            broadcastToProctors('CANDIDATE_REGISTERED', broadcastPayload);
             broadcastToProctors('PARTICIPANT_REGISTERED', candidateSession);
           } else if (msg.type === 'HEARTBEAT_PING') {
             const sid = msg.data.candidateId || msg.data.sid;
@@ -1018,14 +1404,29 @@ server.on('upgrade', (req, socket, head) => {
             }
             if (session) {
               session.isTabHidden = !!msg.data.isTabHidden;
-              if (msg.data.violations != null) {
-                session.violations = Number(msg.data.violations);
-                session.strikes_count = Number(msg.data.violations);
+              if (msg.data.violations != null || msg.data.strikes != null) {
+                const val = Number(msg.data.strikes != null ? msg.data.strikes : msg.data.violations);
+                session.violations = val;
+                session.strikes = val;
+                session.strikes_count = val;
               } else if (session.isTabHidden) {
-                session.violations = Math.max(session.violations || 0, 1);
-                session.strikes_count = session.violations;
+                const val = Math.max(session.strikes || session.violations || 0, 1);
+                session.violations = val;
+                session.strikes = val;
+                session.strikes_count = val;
               }
-              if (msg.data.is_locked != null) session.is_locked = msg.data.is_locked;
+              if (session.strikes >= 3) {
+                session.is_locked = true;
+                session.isLocked = true;
+                session.status = 'LOCKED';
+                session.lock_reason = session.lock_reason || '3/3 focus violations';
+              }
+              if (msg.data.is_locked != null || msg.data.isLocked != null) {
+                const lk = !!(msg.data.is_locked || msg.data.isLocked);
+                session.is_locked = lk;
+                session.isLocked = lk;
+                if (lk) session.status = 'LOCKED';
+              }
               if (msg.data.lock_reason) session.lock_reason = msg.data.lock_reason;
               session.lastViolationTime = Date.now();
               session.lastSeen = Date.now();
@@ -1042,6 +1443,8 @@ server.on('upgrade', (req, socket, head) => {
             }
           } else if (msg.type === 'CLUE_REQUESTED') {
             const reqId = msg.data.id || ('req_' + Date.now().toString(36));
+            const tier = Number(msg.data.tier || 1);
+            const suggested = getQuestionClue(msg.data.qId, tier) || '';
             const hintObj = {
               id: reqId,
               sid: msg.data.candidateId || msg.data.sid,
@@ -1051,10 +1454,11 @@ server.on('upgrade', (req, socket, head) => {
               round: msg.data.round || 'Round 1',
               qId: msg.data.qId,
               qLabel: msg.data.qLabel,
-              tier: msg.data.tier || 1,
+              tier: tier,
               cost: msg.data.cost || 10,
               status: 'PENDING',
-              hintText: '',
+              suggestedClue: suggested,
+              hintText: msg.data.hintText || suggested,
               time: Date.now()
             };
             hintRequests.set(reqId, hintObj);
@@ -1063,7 +1467,7 @@ server.on('upgrade', (req, socket, head) => {
             const reqId = msg.data.id || msg.data.requestId;
             const hint = hintRequests.get(reqId) || msg.data;
             hint.status = msg.data.action === 'grant' ? 'GRANTED' : 'REJECTED';
-            hint.hintText = msg.data.hintText || '';
+            hint.hintText = msg.data.hintText || (msg.data.action === 'grant' ? (getQuestionClue(hint.qId, hint.tier) || 'Clue Approved') : '');
             hint.resolvedAt = Date.now();
             hintRequests.set(reqId, hint);
             sendToCandidate(hint.sid, 'ADMIN_CLUE_DISPATCHED', hint);
@@ -1073,17 +1477,32 @@ server.on('upgrade', (req, socket, head) => {
             const session = liveSessions.get(sid);
             if (session) {
               session.is_locked = false;
+              session.isLocked = false;
               session.lock_reason = '';
               session.violations = 0;
+              session.strikes = 0;
               session.strikes_count = 0;
-              session.status = 'IN_PROGRESS';
+              session.status = 'ONLINE';
               sendToCandidate(sid, 'CANDIDATE_PARDONED', msg.data);
               broadcastToProctors('HEARTBEAT_PING', session);
             }
           } else if (msg.type === 'TEST_SUBMITTED') {
             const sid = msg.data.candidateId || msg.data.sid;
             const session = liveSessions.get(sid) || {};
-            const updated = { ...session, ...msg.data, status: 'COMPLETED', completedAt: Date.now(), lastSeen: Date.now() };
+            const score = Number(msg.data.total || msg.data.score || session.score || 0);
+            const strikes = session.strikes != null ? Number(session.strikes) : (session.violations != null ? Number(session.violations) : 0);
+            const updated = {
+              ...session,
+              ...msg.data,
+              score: score,
+              total: score,
+              strikes: strikes,
+              violations: strikes,
+              strikes_count: strikes,
+              status: 'COMPLETED',
+              completedAt: Date.now(),
+              lastSeen: Date.now()
+            };
             liveSessions.set(sid, updated);
             recalculateLeaderboard();
             broadcastToProctors('TEST_SUBMITTED', updated);
@@ -1093,6 +1512,26 @@ server.on('upgrade', (req, socket, head) => {
             const toR = msg.data?.targetRound || msg.data?.toRound || (Number(fromR) + 1);
             const forceSubmit = msg.data?.forceSubmitActive !== false;
             handleAdvanceRound(fromR, toR, msg.data?.proctorName || 'Admin SOC Command', forceSubmit);
+          } else if (msg.type === 'DELETE_CANDIDATE' || msg.type === 'CANDIDATE_DELETED') {
+            const sid = msg.data?.userId || msg.data?.candidateId || msg.data?.sid || msg.data?.id;
+            if (sid) {
+              const session = liveSessions.get(sid);
+              liveSessions.delete(sid);
+              for (const [reqId, hint] of hintRequests.entries()) {
+                if (hint.sid === sid || hint.candidateId === sid) {
+                  hintRequests.delete(reqId);
+                }
+              }
+              recalculateLeaderboard();
+              syncCandidateDeletionToGoogleDb(sid);
+              broadcastToProctors('CANDIDATE_DELETED', {
+                userId: sid,
+                candidateId: sid,
+                sid: sid,
+                name: session?.name || sid,
+                deletedAt: Date.now()
+              });
+            }
           }
         }
       }
@@ -1187,8 +1626,9 @@ function sendWsFrame(socket, message) {
   socket.write(Buffer.concat([header, payload]));
 }
 
-// Initialize seed sessions & launch server
+// Initialize seed sessions, hydrate from cloud DB, & launch server
 initDefaultSessions();
+loadFromGoogleDb();
 
 server.listen(PORT, () => {
   console.log(`=============================================================`);
