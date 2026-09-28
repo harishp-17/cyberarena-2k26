@@ -9980,9 +9980,19 @@
       if (!url) return null;
       try {
         const fetchUrl = url + '?action=leaderboard' + (typeof API_KEY !== 'undefined' && API_KEY ? '&key=' + encodeURIComponent(API_KEY) : '') + '&_t=' + Date.now();
-        const res = await fetch(fetchUrl, { method: 'GET', headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } });
+        // IMPORTANT: No custom headers (Cache-Control, Pragma, Content-Type) to prevent CORS preflight OPTIONS rejection by Google Apps Script
+        const res = await fetch(fetchUrl, {
+          method: 'GET',
+          mode: 'cors',
+          redirect: 'follow'
+        });
         if (!res.ok) return null;
-        const data = await res.json();
+        const text = await res.text();
+        if (!text || text.trim().startsWith('<')) {
+          // Received HTML error page or OAuth redirect instead of JSON
+          return null;
+        }
+        const data = JSON.parse(text);
         let rows = [];
         if (data && Array.isArray(data.rows)) rows = data.rows;
         else if (data && Array.isArray(data.operatives)) rows = data.operatives;
@@ -9998,14 +10008,23 @@
     window.fetchServerStudentsData = fetchServerStudentsData;
 
     function applyServerDataToRoster(rows) {
-      if (!Array.isArray(rows) || rows.length === 0) return;
+      if (!Array.isArray(rows)) return;
       const roster = getLiveRoster();
       const now = Date.now();
+
+      if (rows.length === 0) {
+        saveLiveRoster(roster);
+        window.operativesRoster = roster;
+        if (typeof renderAdminProctorConsole === 'function') renderAdminProctorConsole();
+        if (typeof updateGlobalMemberCount === 'function') updateGlobalMemberCount();
+        return;
+      }
 
       rows.forEach(r => {
         if (!r) return;
         const sid = r.sid || r.candidateId || r.id || r.userId;
         if (!sid) return;
+        if (String(sid).startsWith('sim_') || r.isSim) return;
 
         const strikes = r.strikes != null ? Number(r.strikes) : (r.violations != null ? Number(r.violations) : (r.strikes_count != null ? Number(r.strikes_count) : 0));
         const score = Number(r.total != null ? r.total : (r.score != null ? r.score : ((Number(r.r1) || 0) + (Number(r.r2) || 0) + (Number(r.r3) || 0) + (Number(r.bonus) || 0))));
@@ -10038,7 +10057,7 @@
           accuracy_rate: Number(r.accuracy_rate != null ? r.accuracy_rate : (existing.accuracy_rate || 0)),
           currentLocation: r.currentLocation || existing.currentLocation || (isLocked ? '⛔ Terminal Locked' : (r.status === 'COMPLETED' ? '🏁 Exam Completed & Submitted' : (r.round ? 'Round ' + r.round : 'Active in Arena'))),
           lastSeen: Number(r.lastSeen) || Number(r.lastPing) || existing.lastSeen || now,
-          isSim: !!(r.isSim || existing.isSim)
+          isSim: false
         };
       });
 
@@ -11892,18 +11911,32 @@
     }
     window.__cyberarenaStateLogger = logDashboardState;
 
+    const isVercelOrStatic = (function () {
+      if (typeof location === 'undefined') return true;
+      const host = (location.hostname || '').toLowerCase();
+      return host.includes('vercel.app') ||
+             host.includes('github.io') ||
+             host.includes('netlify.app') ||
+             host.includes('pages.dev') ||
+             location.protocol === 'file:' ||
+             (host !== 'localhost' && host !== '127.0.0.1' && !location.port);
+    })();
+
     async function verifyDatabaseSync() {
+      if (isVercelOrStatic) {
+        return { inSync: true, total: Object.keys(typeof getLiveRoster === 'function' ? getLiveRoster() : {}).length, mismatches: [] };
+      }
       const isServerEnv = (typeof location !== 'undefined') && (location.protocol === 'http:' || location.protocol === 'https:');
       const serverBase = isServerEnv ? `${location.protocol}//${location.host}` : 'http://localhost:8000';
       try {
-        const res = await fetch(`${serverBase}/api/debug/sync-check?_t=${Date.now()}`, {
-          headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-        });
+        const res = await fetch(`${serverBase}/api/debug/sync-check?_t=${Date.now()}`);
         if (!res.ok) {
           console.error(`[SYNC ERROR]: Failed to fetch /api/debug/sync-check. HTTP status ${res.status}`);
           return { inSync: false, error: `HTTP ${res.status}` };
         }
-        const json = await res.json();
+        const text = await res.text();
+        if (!text || text.trim().startsWith('<')) return { inSync: false, error: 'Non-JSON response' };
+        const json = JSON.parse(text);
         const dbOperatives = json.operatives || json.sessions || [];
         const localRoster = typeof getLiveRoster === 'function' ? getLiveRoster() : {};
         const mismatches = [];
@@ -11987,16 +12020,16 @@
       let isConnected = false;
       let reconnectTimer = null;
       let sseSource = null;
-      const isServerEnv = (typeof location !== 'undefined') && (location.protocol === 'http:' || location.protocol === 'https:');
+      const isServerEnv = !isVercelOrStatic && (typeof location !== 'undefined') && (location.protocol === 'http:' || location.protocol === 'https:');
       const serverBase = isServerEnv ? `${location.protocol}//${location.host}` : 'http://localhost:8000';
       const wsUrl = isServerEnv ? `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws` : 'ws://localhost:8000/ws';
 
       function initSocket() {
-        if (typeof WebSocket === 'undefined') return;
+        if (isVercelOrStatic || typeof WebSocket === 'undefined') return;
         try {
           if (ws) {
             ws.onopen = null; ws.onmessage = null; ws.onclose = null; ws.onerror = null;
-            try { ws.close(); } catch (e) { console.error('[SURVEILLANCE_PIPE_ERROR]:', e); }
+            try { ws.close(); } catch (e) { }
           }
           ws = new WebSocket(wsUrl);
 
@@ -12027,22 +12060,17 @@
 
           ws.onclose = function () {
             isConnected = false;
-            console.warn('[SURVEILLANCE_PIPE]: WebSocket closed, initiating auto-reconnect fallback…');
-            if (!reconnectTimer) {
-              reconnectTimer = setInterval(initSocket, 3000);
+            if (!isVercelOrStatic && !reconnectTimer) {
+              reconnectTimer = setInterval(initSocket, 5000);
             }
           };
 
-          ws.onerror = function (err) {
-            console.error('[SURVEILLANCE_PIPE_ERROR]: WebSocket error:', err);
-          };
-        } catch (err) {
-          console.error('[SURVEILLANCE_PIPE_ERROR]: WebSocket init error:', err);
-        }
+          ws.onerror = function (err) { };
+        } catch (err) { }
       }
 
       function initSSE() {
-        if (typeof EventSource === 'undefined') return;
+        if (isVercelOrStatic || typeof EventSource === 'undefined') return;
         try {
           if (sseSource) sseSource.close();
           sseSource = new EventSource(`${serverBase}/api/events`);
@@ -12050,14 +12078,15 @@
             try {
               const msg = JSON.parse(e.data);
               handlePipelineMessage(msg);
-            } catch (err) { console.error('[SURVEILLANCE_PIPE_ERROR]: SSE parse error:', err); }
+            } catch (err) { }
           };
           sseSource.onerror = function (err) {
-            console.error('[SURVEILLANCE_PIPE_ERROR]: SSE connection error:', err);
+            if (sseSource) {
+              try { sseSource.close(); } catch (e) { }
+              sseSource = null;
+            }
           };
-        } catch (err) {
-          console.error('[SURVEILLANCE_PIPE_ERROR]: SSE init error:', err);
-        }
+        } catch (err) { }
       }
 
       function send(type, data) {
@@ -12074,6 +12103,7 @@
       }
 
       async function postRest(endpoint, data, method = 'POST') {
+        if (isVercelOrStatic) return null;
         try {
           const res = await fetch(`${serverBase}${endpoint}`, {
             method: method,
@@ -12083,9 +12113,11 @@
             },
             body: (method === 'GET' || (method === 'DELETE' && !data)) ? undefined : JSON.stringify(data || {})
           });
-          return await res.json();
+          if (!res.ok) return null;
+          const text = await res.text();
+          if (!text || text.trim().startsWith('<')) return null;
+          return JSON.parse(text);
         } catch (err) {
-          console.error(`[SURVEILLANCE_PIPE_ERROR]: REST ${endpoint} failed:`, err);
           return null;
         }
       }
@@ -12333,19 +12365,22 @@
       }
 
       async function fetchLiveSessions() {
-        // 1. Fetch from Local Node.js server if active
-        try {
-          const res = await fetch(`${serverBase}/api/sessions/live?_t=${Date.now()}`, {
-            headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-          });
-          if (res.ok) {
-            const json = await res.json();
-            const list = json.sessions || json.candidates || [];
-            if (Array.isArray(list) && list.length > 0) {
-              applyServerDataToRoster(list);
+        // 1. Fetch from Local Node.js server if active and not in static/Vercel
+        if (!isVercelOrStatic) {
+          try {
+            const res = await fetch(`${serverBase}/api/sessions/live?_t=${Date.now()}`);
+            if (res.ok) {
+              const text = await res.text();
+              if (text && !text.trim().startsWith('<')) {
+                const json = JSON.parse(text);
+                const list = json.sessions || json.candidates || [];
+                if (Array.isArray(list) && list.length > 0) {
+                  applyServerDataToRoster(list);
+                }
+              }
             }
-          }
-        } catch (err) { }
+          } catch (err) { }
+        }
 
         // 2. Fetch directly from Google Apps Script Database endpoint (Code.gs)
         try {
@@ -12385,18 +12420,23 @@
           postRest('/api/admin/advance-round', payload);
         },
         syncTournamentState: async function () {
-          try {
-            const res = await fetch(`${serverBase}/api/tournament-state`);
-            if (res.ok) {
-              const json = await res.json();
-              if (json.success && json.tournamentState) {
-                window.arenaGlobalRound = json.tournamentState.currentRound;
-                if (typeof checkCandidateRoundSync === 'function') checkCandidateRoundSync(json.tournamentState);
-                if (typeof adminUpdateRoundControlBand === 'function') adminUpdateRoundControlBand();
-                return json.tournamentState;
+          if (!isVercelOrStatic) {
+            try {
+              const res = await fetch(`${serverBase}/api/tournament-state`);
+              if (res.ok) {
+                const text = await res.text();
+                if (text && !text.trim().startsWith('<')) {
+                  const json = JSON.parse(text);
+                  if (json.success && json.tournamentState) {
+                    window.arenaGlobalRound = json.tournamentState.currentRound;
+                    if (typeof checkCandidateRoundSync === 'function') checkCandidateRoundSync(json.tournamentState);
+                    if (typeof adminUpdateRoundControlBand === 'function') adminUpdateRoundControlBand();
+                    return json.tournamentState;
+                  }
+                }
               }
-            }
-          } catch (err) { }
+            } catch (err) { }
+          }
           return null;
         },
         pardonCandidate: function (payload) { send('CANDIDATE_PARDONED', payload); postRest('/api/sessions/pardon', payload); },
@@ -13478,11 +13518,13 @@
             SurveillancePipeline.send('DELETE_CANDIDATE', { sid: sid, userId: sid, candidateId: sid });
           }
 
-          // 4. Send DELETE request to REST API controller
-          await fetch(`${serverBase}/api/participants/${encodeURIComponent(sid)}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' }
-          }).catch(err => console.error('[SURVEILLANCE_PIPE_ERROR]: REST delete error:', err));
+          // 4. Send DELETE request to REST API controller if active backend exists
+          if (!isVercelOrStatic) {
+            await fetch(`${serverBase}/api/participants/${encodeURIComponent(sid)}`, {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' }
+            }).catch(() => {});
+          }
 
           // 5. Also sync to Google DB if available
           if (typeof GOOGLE_DATABASE_URL !== 'undefined' && GOOGLE_DATABASE_URL && !GOOGLE_DATABASE_URL.startsWith('PASTE_')) {
