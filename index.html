@@ -6785,6 +6785,9 @@
                 <use href="#i-volume-high" />
               </svg></i>
           </button>
+          <div class="status-pill hint-wallet-pill" id="headerHintWallet" style="display:none; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; font-family:var(--font-mono); font-weight:700; font-size:12px; padding:3px 10px; border-radius:20px;">
+            <span>🪙</span> <span id="headerHintPoints">10 Hint Pts</span>
+          </div>
           <div class="status-pill">
             <span class="ping"></span>
             <span id="playerTag">SYSTEM ONLINE • LIVE PORTAL</span>
@@ -6998,7 +7001,7 @@
               <h2>Round 2 — Cyber Arcade</h2>
               <span class="tag">15 PUZZLES</span>
             </div>
-            <div class="timer roundTimerDisplay" id="r2Timer">30:00</div>
+            <div class="timer roundTimerDisplay" id="r2Timer">45:00</div>
           </div>
           <div class="progressbar">
             <div id="r2Progress" style="width:0%;"></div>
@@ -7235,7 +7238,7 @@
               <h2>Round 3 — The Final Investigation</h2>
               <span class="tag">BOSS LEVEL</span>
             </div>
-            <div class="timer roundTimerDisplay" id="r3Timer">60:00</div>
+            <div class="timer roundTimerDisplay" id="r3Timer">45:00</div>
           </div>
           <div class="panel" style="margin-bottom:20px;">
             <div class="landing-eyebrow" id="r3CaseTitle" style="margin-bottom:10px;"></div>
@@ -7435,8 +7438,8 @@
                   <span class="admin-tab-badge" id="atabBadgeStudents">0</span>
                 </button>
                 <button class="admin-tab-btn" id="atab-hints" onclick="adminSwitchTab('hints')">
-                  <span>🙋 Clue Requests</span>
-                  <span class="admin-tab-badge warn" id="atabBadgeHints" style="display: none;">0</span>
+                  <span>⚡ Automated Hint Audit</span>
+                  <span class="admin-tab-badge info" id="atabBadgeHints" style="display: none;">0</span>
                 </button>
                 <button class="admin-tab-btn" id="atab-leaderboard" onclick="adminSwitchTab('leaderboard')">
                   <span>🏆 Leaderboard</span>
@@ -7458,10 +7461,10 @@
                   <b class="kpi-chip-val" id="kpiViolationsCount">0 Strikes</b>
                 </div>
                 <div class="admin-kpi-chip kpi-hints" id="kpiPendingHintsChip"
-                  title="Pending clue requests awaiting dispatch">
-                  <span>🙋</span>
-                  <span class="kpi-chip-lbl">Pending Clues:</span>
-                  <b class="kpi-chip-val" id="kpiPendingHints">0 Pending</b>
+                  title="Automated hints unlocked by students (Self-Service)">
+                  <span>💡</span>
+                  <span class="kpi-chip-lbl">Hints Used:</span>
+                  <b class="kpi-chip-val" id="kpiPendingHints">0 Unlocked</b>
                 </div>
                 <div class="admin-kpi-chip kpi-score" title="Highest tournament score currently recorded">
                   <span>🏆</span>
@@ -7552,7 +7555,7 @@
                   <i class="ico"><svg viewBox="0 0 512 512" aria-hidden="true">
                       <use href="#i-shield-halved" />
                     </svg></i>
-                  <span>Live Student Hint Requests &amp; Access Control (-10 Trust Points Per Clue)</span>
+                  <span>Automated Student Hint Wallet &amp; Clue Access Audit (Instant Unlock · 10 Pts Per Clue)</span>
                 </div>
                 <button class="btn ghost small" onclick="renderAdminHintConsole()">↻ Refresh Requests</button>
               </div>
@@ -7760,7 +7763,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(56,189,248,0.2); padding-bottom:8px;">
         <h3 style="margin:0; font-size:16px; color:var(--cyan); display:flex; align-items:center; gap:8px;">
-          <span>💡</span> REQUEST ADMIN CLUE
+          <span>💡</span> INSTANT CLUE REVEAL · HINT WALLET
         </h3>
         <button onclick="closeClueConfirmModal()"
           style="background:none; border:none; color:#94a3b8; font-size:20px; line-height:1; cursor:pointer;"
@@ -7771,7 +7774,7 @@
         <button class="btn ghost" style="flex:1;" onclick="closeClueConfirmModal()">Cancel</button>
         <button class="btn solid" id="clueConfirmSubmitBtn"
           style="flex:1; background:linear-gradient(135deg,#0284c7,#0369a1); border-color:#38bdf8;"
-          onclick="confirmAndSendClueRequest()">Confirm &amp; Deduct 10 Pts</button>
+          onclick="confirmAndSendClueRequest()">Instant Unlock (-10 Pts)</button>
       </div>
     </div>
   </div>
@@ -8791,6 +8794,11 @@
        CONFIG
        ============================================================ */
     const API_URL = "https://script.google.com/macros/s/AKfycbzXXkdjKyfUmXbh03nSqLhF4c53ahnCkFWsjWimzxOLxl-WmjHAwLdqi9a4O4YiKk4F5w/exec";
+    const SCRIPT_URL = API_URL;
+    const GOOGLE_DATABASE_URL = API_URL;
+    window.API_URL = API_URL;
+    window.SCRIPT_URL = API_URL;
+    window.GOOGLE_DATABASE_URL = API_URL;
     const API_KEY = "";                       // must equal API_KEY in Code.gs (leave "" if you don't use one)
     const ADMIN_PIN = "2825";
     const MAX_TAB_WARNINGS = 3;               // per round
@@ -8798,7 +8806,7 @@
     const PREF_KEY = "cyberarena_prefs_v1";
     const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // a saved session older than this is ignored
     const READ_SECONDS = 60;
-    const ROUND_SECONDS = { 1: 30 * 60, 2: 30 * 60, 3: 60 * 60 };
+    const ROUND_SECONDS = { 1: 30 * 60, 2: 45 * 60, 3: 45 * 60 };
 
     const $ = id => document.getElementById(id);
     const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -8908,12 +8916,16 @@
         waiting: null,                  // { just, next }
         deadline: 0,                    // absolute epoch-ms when the current round timer ends
         remainingSeconds: 0,
+        roundRemaining: { r1: null, r2: null, r3: null },
+        hintWallet: 10,                 // 10 initial Hint Points (Automated Hint System)
+        hintsUsed: 0,
         startedAt: Date.now(), completedAt: null, durationSeconds: 0, status: "IN_PROGRESS", violations: 0, totalViolations: 0, strikes_count: 0, lifetime_violations: 0, is_locked: false, lock_reason: "", pardon_history: [],
         seq: 0, rank: 0,
-        scores: { r1: 0, r2: 0, r3: 0 },
+        scores: { r1: 0, r2: 0, r3: 0, bonus: 0 },
         r1: { idx: 0, answers: new Array(R1.length).fill(null), submitted: false },
         r2: { idx: 0, answers: new Array(R2.length).fill(''), submitted: false },
         r3: { idx: 0, answers: new Array(R3.questions.length).fill(''), submitted: false, flags: [] },
+        waitingBonus: { threatgen: 0, flip: 0, term: 0 },
         startedAt: Date.now(), savedAt: Date.now()
       };
     }
@@ -8933,6 +8945,11 @@
         if (o.round === 'WAITING' && (!o.waiting || !o.waiting.just)) return null;
         if (o.r1.answers.length !== R1.length || o.r2.answers.length !== R2.length || o.r3.answers.length !== R3.questions.length) return null;
         if (!Array.isArray(o.r3.flags)) o.r3.flags = [];
+        if (o.hintWallet == null) o.hintWallet = 10;
+        if (o.hintsUsed == null) o.hintsUsed = 0;
+        if (!o.roundRemaining) o.roundRemaining = { r1: null, r2: null, r3: null };
+        if (!o.scores.bonus) o.scores.bonus = 0;
+        if (!o.waitingBonus) o.waitingBonus = { threatgen: 0, flip: 0, term: 0 };
         return o;
       } catch (e) { return null; }
     }
@@ -8968,10 +8985,19 @@
       }
       S.rank = r;
     }
+    function updateHintWalletDisplay() {
+      if (!S) return;
+      const pts = S.hintWallet != null ? S.hintWallet : 10;
+      const el = $('headerHintPoints');
+      const wrap = $('headerHintWallet');
+      if (el) el.textContent = pts + ' Hint Pts';
+      if (wrap) wrap.style.display = 'inline-flex';
+    }
     function setHeader() {
       const p = S.player;
       $('playerTag').textContent = p.name + ' · ' + p.dept + ' · Yr ' + p.year;
       $('rankBadge').classList.add('show');
+      updateHintWalletDisplay();
     }
 
     /* ============================================================
@@ -9622,6 +9648,11 @@
       // Show proctor surveillance tab by default
       adminSwitchTab('proctor');
 
+      // UNIFY ADMIN DATA SOURCE: Hydrate all server students from Google Sheet (Code.gs)
+      fetchServerStudentsData().then(rows => {
+        if (rows && rows.length > 0) applyServerDataToRoster(rows);
+      }).catch(() => {});
+
       // Hydrate all database candidates & subscribe to proctor surveillance room
       if (typeof CyberArenaPipeline !== 'undefined') {
         if (CyberArenaPipeline.joinSurveillance) {
@@ -9636,6 +9667,22 @@
       refreshLeaderboard();
       if (typeof verifyDatabaseSync === 'function') {
         setTimeout(verifyDatabaseSync, 1000);
+      }
+
+      // Auto-start live polling when entering Admin screen
+      if (!autoRefreshInterval) {
+        autoRefreshOn = true;
+        const sw = $('autoRefreshSwitch');
+        if (sw) sw.classList.add('on');
+        autoRefreshInterval = setInterval(() => {
+          if (!currentScreenIs('screen-admin')) return;
+          refreshLeaderboard();
+          if (typeof CyberArenaPipeline !== 'undefined' && CyberArenaPipeline.fetchLiveSessions) {
+            CyberArenaPipeline.fetchLiveSessions();
+          }
+          renderAdminHintConsole();
+          renderAdminProctorConsole();
+        }, 3000);
       }
     }
     function exitAdmin() {
@@ -9930,22 +9977,103 @@
     }
     initLeaderboardListener();
 
+    async function fetchServerStudentsData() {
+      const url = (typeof API_URL !== 'undefined' && API_URL && !API_URL.startsWith('PASTE_')) ? API_URL : ((typeof SCRIPT_URL !== 'undefined') ? SCRIPT_URL : null);
+      if (!url) return null;
+      try {
+        const fetchUrl = url + '?action=leaderboard' + (typeof API_KEY !== 'undefined' && API_KEY ? '&key=' + encodeURIComponent(API_KEY) : '') + '&_t=' + Date.now();
+        const res = await fetch(fetchUrl, { method: 'GET', headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } });
+        if (!res.ok) return null;
+        const data = await res.json();
+        let rows = [];
+        if (data && Array.isArray(data.rows)) rows = data.rows;
+        else if (data && Array.isArray(data.operatives)) rows = data.operatives;
+        else if (data && Array.isArray(data.sessions)) rows = data.sessions;
+        else if (data && Array.isArray(data.candidates)) rows = data.candidates;
+        else if (Array.isArray(data)) rows = data;
+        return rows;
+      } catch (err) {
+        console.warn('[SERVER_FETCH_WARN]: Could not fetch server students from Code.gs:', err);
+        return null;
+      }
+    }
+    window.fetchServerStudentsData = fetchServerStudentsData;
+
+    function applyServerDataToRoster(rows) {
+      if (!Array.isArray(rows) || rows.length === 0) return;
+      const roster = getLiveRoster();
+      const now = Date.now();
+
+      rows.forEach(r => {
+        if (!r) return;
+        const sid = r.sid || r.candidateId || r.id || r.userId;
+        if (!sid) return;
+
+        const strikes = r.strikes != null ? Number(r.strikes) : (r.violations != null ? Number(r.violations) : (r.strikes_count != null ? Number(r.strikes_count) : 0));
+        const score = Number(r.total != null ? r.total : (r.score != null ? r.score : ((Number(r.r1) || 0) + (Number(r.r2) || 0) + (Number(r.r3) || 0) + (Number(r.bonus) || 0))));
+        const isLocked = !!(r.is_locked || r.isLocked || strikes >= 3 || r.status === 'LOCKED');
+        const existing = roster[sid] || {};
+
+        roster[sid] = {
+          ...existing,
+          ...r,
+          id: sid,
+          userId: sid,
+          sid: sid,
+          candidateId: sid,
+          name: r.name || existing.name || 'Operative ' + String(sid).slice(-4),
+          dept: r.dept || existing.dept || 'CSBS',
+          year: r.year || existing.year || 'III',
+          r1: Number(r.r1) || 0,
+          r2: Number(r.r2) || 0,
+          r3: Number(r.r3) || 0,
+          bonus: Number(r.bonus) || 0,
+          score: score,
+          total: score,
+          strikes: strikes,
+          violations: strikes,
+          strikes_count: strikes,
+          isLocked: isLocked,
+          is_locked: isLocked,
+          status: r.status || (isLocked ? 'LOCKED' : (existing.status || 'ONLINE')),
+          durationSeconds: Number(r.durationSeconds) || Number(r.duration) || existing.durationSeconds || 0,
+          accuracy_rate: Number(r.accuracy_rate != null ? r.accuracy_rate : (existing.accuracy_rate || 0)),
+          currentLocation: r.currentLocation || existing.currentLocation || (isLocked ? '⛔ Terminal Locked' : (r.status === 'COMPLETED' ? '🏁 Exam Completed & Submitted' : (r.round ? 'Round ' + r.round : 'Active in Arena'))),
+          lastSeen: Number(r.lastSeen) || Number(r.lastPing) || existing.lastSeen || now,
+          isSim: !!(r.isSim || existing.isSim)
+        };
+      });
+
+      saveLiveRoster(roster);
+      window.operativesRoster = roster;
+
+      if (typeof renderAdminProctorConsole === 'function') renderAdminProctorConsole();
+      if (typeof updateGlobalMemberCount === 'function') updateGlobalMemberCount();
+    }
+    window.applyServerDataToRoster = applyServerDataToRoster;
+
     async function refreshLeaderboard() {
       const tbody = $('adminTableBody'), tag = $('adminDemoTag');
-      const configured = API_URL && !API_URL.startsWith('PASTE_');
+      const configured = (API_URL && !API_URL.startsWith('PASTE_')) || (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL && !SCRIPT_URL.startsWith('PASTE_'));
       let rows = [], demo = false;
       if (configured) {
         try {
-          const res = await fetch(API_URL + '?action=leaderboard' + (API_KEY ? '&key=' + encodeURIComponent(API_KEY) : ''), { method: 'GET' });
-          const data = await res.json();
-          rows = data.rows || [];
+          const serverRows = await fetchServerStudentsData();
+          if (serverRows && serverRows.length > 0) {
+            rows = serverRows;
+            // UNIFY ADMIN DATA SOURCE: Update live roster with server data and immediately re-render roster cards
+            applyServerDataToRoster(rows);
+          } else {
+            demo = true;
+          }
         } catch (err) { demo = true; }
       } else demo = true;
 
       if (demo) {
-        const liveLeaderboard = getRankedLeaderboard();
-        if (liveLeaderboard && liveLeaderboard.length > 0) {
-          rows = liveLeaderboard;
+        const liveRoster = getLiveRoster();
+        const liveList = Object.values(liveRoster);
+        if (liveList && liveList.length > 0) {
+          rows = liveList;
         } else {
           rows = [
             { sid: 'sim_varma', name: 'Dr. S. Varma', dept: 'CSE', year: 'IV', r1: 25, r2: 15, r3: 5, bonus: 3, status: 'COMPLETED', violations: 0, durationSeconds: 1710, accuracy_rate: 100 },
@@ -10193,10 +10321,28 @@
        ============================================================ */
     function payload(status) {
       S.seq = (S.seq || 0) + 1; save();
+      const curRemaining = remainingNow();
+      const hintsCount = S.hintsUsed != null ? S.hintsUsed : (getHintRequests().filter(r => r.sid === S.sid && r.status === 'GRANTED').length);
+      const hintPoints = S.hintWallet != null ? S.hintWallet : 10;
       return {
         action: 'sync', key: API_KEY, sid: S.sid, seq: S.seq, name: S.player.name, dept: S.player.dept, year: S.player.year,
-        r1: S.scores.r1, r2: S.scores.r2, r3: S.scores.r3, round: S.round, status: status || 'IN_PROGRESS',
-        violations: S.totalViolations || 0, ts: Date.now()
+        r1: S.scores.r1, r2: S.scores.r2, r3: S.scores.r3, bonus: S.scores.bonus || 0,
+        score: (S.scores.r1 || 0) + (S.scores.r2 || 0) + (S.scores.r3 || 0) + (S.scores.bonus || 0),
+        total: (S.scores.r1 || 0) + (S.scores.r2 || 0) + (S.scores.r3 || 0) + (S.scores.bonus || 0),
+        round: S.round, status: status || (S.completedAt ? 'FINISHED' : 'IN_PROGRESS'),
+        violations: S.totalViolations || 0, strikes: S.strikes_count || S.violations || 0,
+        remainingSeconds: curRemaining,
+        remainingTime: fmtTime(curRemaining),
+        roundRemaining: S.roundRemaining || {},
+        r1Remaining: S.roundRemaining ? S.roundRemaining.r1 : null,
+        r2Remaining: S.roundRemaining ? S.roundRemaining.r2 : null,
+        r3Remaining: S.roundRemaining ? S.roundRemaining.r3 : null,
+        hintsCount: hintsCount,
+        hintsUsed: hintsCount,
+        hintPoints: hintPoints,
+        hintWallet: hintPoints,
+        durationSeconds: S.durationSeconds || Math.round((Date.now() - (S.startedAt || Date.now())) / 1000),
+        ts: Date.now()
       };
     }
     /* spreadMs randomises the send time so 70 students finishing together don't hit the sheet in the same instant;
@@ -10244,7 +10390,9 @@
       1: {
         title: 'Cyber Quiz Master', eyebrow: 'ROUND 1 / 3', rules: [
           R1.length + ' multiple-choice questions covering cybersecurity fundamentals and digital trust.',
-          'The round timer runs for 30 minutes.',
+          'The round timer runs for 45 minutes.',
+          'Hint Wallet: Instant clue reveal available for 10 hint points. Zero admin approval needed.',
+          'Hint Wallet: You begin with 10 Hint Points. Unlocking a clue deducts 10 points instantly with zero admin waiting.',
           'Use Next / Previous to move between questions — you may revisit and change answers.',
           "If you submit early, you'll enter the Cyber Waiting Room with mini-games until the round timer ends — then Round 2 begins.",
           'Switching tabs or minimizing the window is logged as a violation (' + MAX_TAB_WARNINGS + ' violations auto-submit the round).',
@@ -10262,7 +10410,8 @@
         title: 'The Final Investigation — Boss Level', eyebrow: 'ROUND 3 / 3', rules: [
           'One cyber-crime case study with four pieces of evidence, pinned at the top of the screen. Tap the flag on any card to mark it suspicious.',
           'Answer all ' + R3.questions.length + ' investigation questions using the stepper — Previous / Next Question move between them.',
-          'You have 60 minutes for this final round.',
+          'You have 45 minutes for this final round.',
+          'Hint Wallet: Instant forensic clues available for 10 hint points.',
           'The submit button appears on Question ' + R3.questions.length + '. There is no waiting room — submitting ends the competition immediately.',
           AUTOSAVE_RULE]
       }
@@ -10323,9 +10472,25 @@
       gameActive = false;
       const spread = 20000;                       // everyone expires together -> spread the DB writes
       SFX.round();
-      if (n === 1) { if (!S.r1.submitted) { showToast('Time is up — Round 1 auto-submitted.'); gradeRound1(spread); } startRoundFlow(2); }
-      else if (n === 2) { if (!S.r2.submitted) { showToast('Time is up — Round 2 auto-submitted.'); gradeRound2(spread); } startRoundFlow(3); }
-      else { if (!S.r3.submitted) { showToast('Time is up — final report auto-submitted.'); gradeRound3(spread); } finishCompetition(true); }
+      if (!S.roundRemaining) S.roundRemaining = {};
+      S.roundRemaining['r' + n] = 0;
+      save();
+      if (n === 1) {
+        if (!S.r1.submitted) { gradeRound1(spread); }
+        showToast('⏰ Round 1 time expired! Answers auto-submitted. Advancing to Round 2...');
+        syncProgress(1500, 3, 'R1_EXPIRED');
+        startRoundFlow(2);
+      } else if (n === 2) {
+        if (!S.r2.submitted) { gradeRound2(spread); }
+        showToast('⏰ Round 2 time expired! Answers auto-submitted. Advancing to Round 3...');
+        syncProgress(1500, 3, 'R2_EXPIRED');
+        startRoundFlow(3);
+      } else {
+        if (!S.r3.submitted) { gradeRound3(spread); }
+        showToast('⏰ Final Investigation time expired! Answers auto-submitted.');
+        syncProgress(1500, 4, 'FINISHED');
+        finishCompetition(true);
+      }
     }
 
     /* submit confirmation (manual submits only — timeouts / violations skip it) */
@@ -10348,9 +10513,12 @@
     }
     function finalizeRound(n) {
       if (!S) return;
-      if (n === 1) { if (S.r1.submitted) return; gradeRound1(); SFX.success(); enterWaitingRoom(1, 2); }
-      else if (n === 2) { if (S.r2.submitted) return; gradeRound2(); SFX.success(); enterWaitingRoom(2, 3); }
-      else { if (S.r3.submitted) return; gradeRound3(8000); finishCompetition(false); }
+      if (!S.roundRemaining) S.roundRemaining = {};
+      S.roundRemaining['r' + n] = Math.max(0, S.remainingSeconds || remainingNow());
+      save();
+      if (n === 1) { if (S.r1.submitted) return; gradeRound1(); SFX.success(); syncProgress(1000, 3, 'R1_COMPLETED'); enterWaitingRoom(1, 2); }
+      else if (n === 2) { if (S.r2.submitted) return; gradeRound2(); SFX.success(); syncProgress(1000, 3, 'R2_COMPLETED'); enterWaitingRoom(2, 3); }
+      else { if (S.r3.submitted) return; gradeRound3(8000); syncProgress(2000, 4, 'FINISHED'); finishCompetition(false); }
     }
 
     /* ============================================================
@@ -12172,6 +12340,7 @@
       }
 
       async function fetchLiveSessions() {
+        // 1. Fetch from Local Node.js server if active
         try {
           const res = await fetch(`${serverBase}/api/sessions/live?_t=${Date.now()}`, {
             headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
@@ -12179,74 +12348,19 @@
           if (res.ok) {
             const json = await res.json();
             const list = json.sessions || json.candidates || [];
-            if (Array.isArray(list)) {
-              const roster = getLiveRoster();
-              list.forEach(s => {
-                const sid = s.sid || s.candidateId || s.id;
-                if (sid) {
-                  s.sid = sid;
-                  s.candidateId = sid;
-                  s.lastSeen = Number(s.lastSeen) || Number(s.lastPing) || Number(s.startedAt) || Date.now();
-                  const strikes = s.strikes != null ? Number(s.strikes) : (s.violations != null ? Number(s.violations) : (s.strikes_count != null ? Number(s.strikes_count) : 0));
-                  const score = s.score != null ? Number(s.score) : 0;
-                  const isLocked = !!(s.is_locked || s.isLocked || strikes >= 3 || s.status === 'LOCKED');
-                  s.score = score;
-                  s.strikes = strikes;
-                  s.violations = strikes;
-                  s.strikes_count = strikes;
-                  s.is_locked = isLocked;
-                  s.isLocked = isLocked;
-                  s.status = s.status || (isLocked ? 'LOCKED' : 'ONLINE');
-                  roster[sid] = { ...(roster[sid] || {}), ...s };
-                }
-              });
-              saveLiveRoster(roster);
-              if (typeof renderAdminProctorConsole === 'function') renderAdminProctorConsole();
-              if (typeof refreshLeaderboard === 'function') refreshLeaderboard();
-              if (typeof logDashboardState === 'function') logDashboardState('fetch_live_sessions');
+            if (Array.isArray(list) && list.length > 0) {
+              applyServerDataToRoster(list);
             }
           }
-        } catch (err) {
-          console.error('[SURVEILLANCE_PIPE_ERROR]: fetchLiveSessions error:', err);
-        }
+        } catch (err) { }
 
-        // Also hydrate directly from Google Apps Script Database endpoint
+        // 2. Fetch directly from Google Apps Script Database endpoint (Code.gs)
         try {
-          if (typeof GOOGLE_DATABASE_URL !== 'undefined' && GOOGLE_DATABASE_URL && !GOOGLE_DATABASE_URL.startsWith('PASTE_')) {
-            const gRes = await fetch(`${GOOGLE_DATABASE_URL}?action=leaderboard`);
-            if (gRes.ok) {
-              const gJson = await gRes.json();
-              if (gJson && gJson.success && Array.isArray(gJson.rows)) {
-                const roster = getLiveRoster();
-                gJson.rows.forEach(r => {
-                  if (r.sid) {
-                    const strikes = r.strikes != null ? Number(r.strikes) : (r.violations != null ? Number(r.violations) : 0);
-                    const isLocked = !!(r.is_locked || r.isLocked || strikes >= 3 || r.status === 'LOCKED');
-                    const score = Number(r.total || r.score || ((r.r1 || 0) + (r.r2 || 0) + (r.r3 || 0)) || 0);
-                    roster[r.sid] = {
-                      ...(roster[r.sid] || {}),
-                      ...r,
-                      sid: r.sid,
-                      candidateId: r.sid,
-                      score: score,
-                      strikes: strikes,
-                      violations: strikes,
-                      strikes_count: strikes,
-                      isLocked: isLocked,
-                      is_locked: isLocked,
-                      status: r.status || (isLocked ? 'LOCKED' : 'ONLINE'),
-                      lastSeen: Number(r.lastSeen) || Date.now()
-                    };
-                  }
-                });
-                saveLiveRoster(roster);
-                if (typeof renderAdminProctorConsole === 'function') renderAdminProctorConsole();
-                if (typeof refreshLeaderboard === 'function') refreshLeaderboard();
-                if (typeof logDashboardState === 'function') logDashboardState('google_db_hydrated');
-              }
-            }
+          const serverRows = await fetchServerStudentsData();
+          if (serverRows && serverRows.length > 0) {
+            applyServerDataToRoster(serverRows);
           }
-        } catch (gErr) {}
+        } catch (gErr) { }
 
         return getLiveRoster();
       }
@@ -12420,6 +12534,11 @@
         r2: S.scores.r2 || 0,
         r3: S.scores.r3 || 0,
         bonus: S.scores.bonus || 0,
+        hintWallet: S.hintWallet != null ? S.hintWallet : 10,
+        hintsUsed: S.hintsUsed || (getHintRequests().filter(r => r.sid === S.sid && r.status === 'GRANTED').length),
+        remainingSeconds: remainingNow(),
+        remainingTime: fmtTime(remainingNow()),
+        roundRemaining: S.roundRemaining || {},
         violations: S.strikes_count || S.violations || 0,
         strikes_count: S.strikes_count || S.violations || 0,
         lifetime_violations: S.lifetime_violations || S.totalViolations || 0,
@@ -12926,13 +13045,8 @@
       const hints = getHintRequests();
       const now = Date.now();
 
-      const students = Object.values(roster).filter(s => {
-        if (!s) return false;
-        const isComp = (s.status === 'COMPLETED' || s.status === 'FINISHED' || s.status === 'SUBMITTED');
-        const isPending = (s.status === 'STATUS_PENDING' || s.status === 'PENDING' || s.status === 'REGISTERED' || s.status === 'WAITING');
-        const lastSeen = Number(s.lastSeen) || Number(s.lastPing) || Number(s.startedAt) || Number(s.qStartTime) || now;
-        return isComp || isPending || ((now - lastSeen) < 15 * 60 * 1000);
-      });
+      // DO NOT FILTER BY LOCAL SESSION / TIMESTAMPS: Roster cards display ALL candidates returned from Google Sheet / database
+      const students = Object.values(roster).filter(s => !!(s && (s.sid || s.candidateId || s.id || s.name)));
 
       // Update KPI Metrics
       const totalStudents = students.length;
@@ -13241,6 +13355,8 @@
 
       if (typeof logDashboardState === 'function') logDashboardState('render_admin_console');
     }
+    window.renderAdminConsole = renderAdminProctorConsole;
+    window.renderRosterCards = renderAdminProctorConsole;
 
     /* ============================================================
        LIVE SCREEN SURVEILLANCE & VIRTUAL MIRROR MODAL
@@ -13780,8 +13896,11 @@
       const ptsToAdd = Math.min(10, 50 - curEarned);
       S.waitingBonus[gameId] = curEarned + ptsToAdd;
       S.scores.bonus = (S.scores.bonus || 0) + ptsToAdd;
+      if (S.hintWallet == null) S.hintWallet = 10;
+      S.hintWallet = Math.min(50, S.hintWallet + ptsToAdd);
       save();
       updateRank();
+      updateHintWalletDisplay();
       broadcastParticipantHeartbeat();
       updateWaitingBonusDisplay();
 
@@ -13875,9 +13994,9 @@
 
     function openClueConfirmModal(roundName, qId, qLabel) {
       if (!S || S.is_locked) return;
-      const curScore = (S.scores.r1 || 0) + (S.scores.r2 || 0) + (S.scores.r3 || 0) + (S.scores.bonus || 0);
-      if (curScore < CLUE_COST) {
-        showToast('❌ Insufficient points (Requires 10 Trust Points · Balance: ' + curScore + ' pts)');
+      const wallet = (S.hintWallet != null) ? S.hintWallet : 10;
+      if (wallet < CLUE_COST) {
+        showToast('❌ Insufficient Hint Points (Requires 10 Hint Pts · Balance: ' + wallet + ' pts)');
         renderCurrentHintBox(roundName, qId);
         return;
       }
@@ -13895,16 +14014,14 @@
       const isTier2 = (requestedTier === 2);
 
       const tierBadge = isTier2
-        ? '<span style="background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid #22c55e; padding:3px 8px; border-radius:4px; font-weight:700;">🔑 Clue 2: Direct Walkthrough (Completely Easier)</span>'
-        : '<span style="background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid #38bdf8; padding:3px 8px; border-radius:4px; font-weight:700;">💡 Clue 1: Conceptual Nudge (Slightly Easier)</span>';
+        ? '<span style="background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid #22c55e; padding:3px 8px; border-radius:4px; font-weight:700;">🔑 Level 2: Direct Walkthrough</span>'
+        : '<span style="background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid #38bdf8; padding:3px 8px; border-radius:4px; font-weight:700;">💡 Level 1: Conceptual Nudge</span>';
 
       const tierDesc = isTier2
-        ? '• <b>Clue 2: Direct Walkthrough</b> provides explicit step-by-step instructions so you can easily understand exactly how to solve this challenge.<br>' +
-          '• Once approved by the proctor, the direct walkthrough will be unlocked in your terminal.<br>' +
-          '• If declined by the proctor, your 10 points will be automatically refunded.'
-        : '• <b>Clue 1: Conceptual Nudge</b> points you in the right direction without revealing the exact solution.<br>' +
-          '• Once approved by the proctor, the conceptual clue will be unlocked in your terminal.<br>' +
-          '• If declined by the proctor, your 10 points will be automatically refunded.';
+        ? '• <b>Level 2: Direct Walkthrough</b> instantly reveals explicit, step-by-step guidance directly in your panel.<br>' +
+          '• Deducts 10 points immediately from your Hint Wallet (Zero waiting for admin approval).'
+        : '• <b>Level 1: Conceptual Nudge</b> points you in the right direction without revealing the complete solution.<br>' +
+          '• Deducts 10 points immediately from your Hint Wallet (Zero waiting for admin approval).';
 
       pendingClueRequest = { roundName, qId, qLabel, tier: requestedTier };
 
@@ -13917,20 +14034,20 @@
           '<b style="color:var(--cyan);">' + escapeHtml(qLabel) + ' (' + escapeHtml(roundName) + ')</b>' +
           '</div>' +
           '<div style="display:flex; justify-content:space-between; margin-bottom:8px; align-items:center;">' +
-          '<span style="color:#94a3b8;">Clue Tier:</span>' +
+          '<span style="color:#94a3b8;">Clue Level:</span>' +
           tierBadge +
           '</div>' +
           '<div style="display:flex; justify-content:space-between; margin-bottom:8px;">' +
           '<span style="color:#94a3b8;">Clue Cost:</span>' +
-          '<b style="color:#f59e0b;">' + CLUE_COST + ' Trust Points</b>' +
+          '<b style="color:#f59e0b;">' + CLUE_COST + ' Hint Points</b>' +
           '</div>' +
           '<div style="display:flex; justify-content:space-between; margin-bottom:8px;">' +
-          '<span style="color:#94a3b8;">Current Balance:</span>' +
-          '<span style="color:#e2e8f0; font-weight:600;">' + curScore + ' pts</span>' +
+          '<span style="color:#94a3b8;">Wallet Balance:</span>' +
+          '<span style="color:#e2e8f0; font-weight:600;">' + wallet + ' pts</span>' +
           '</div>' +
           '<div style="display:flex; justify-content:space-between; border-top:1px dashed #334155; padding-top:8px; margin-top:8px;">' +
-          '<span style="color:#94a3b8;">Balance After Request:</span>' +
-          '<b style="color:#34d399; font-size:13px;">' + (curScore - CLUE_COST) + ' pts</b>' +
+          '<span style="color:#94a3b8;">Balance After Unlock:</span>' +
+          '<b style="color:#34d399; font-size:13px;">' + (wallet - CLUE_COST) + ' pts</b>' +
           '</div>' +
           '</div>' +
           '<p style="color:#94a3b8; font-size:11px; margin:0; line-height:1.5;">' +
@@ -13955,28 +14072,39 @@
         closeClueConfirmModal();
         return;
       }
-      const { roundName, qId, qLabel } = pendingClueRequest;
+      const { roundName, qId, qLabel, tier } = pendingClueRequest;
       closeClueConfirmModal();
-      requestAdminHint(roundName, qId, qLabel);
+      useAutomatedHint(roundName, qId, tier, qLabel);
     }
 
-    function requestAdminHint(roundName, qId, qLabel) {
-      if (!S || S.is_locked) return { status: 403, ok: false, error: 'SESSION_LOCKED' };
+    /**
+     * 100% AUTOMATED HINT WALLET SYSTEM
+     * Immediately deducts 10 hint points and displays Level 1 or Level 2 hint directly in student panel.
+     * No admin approval needed.
+     */
+    function useAutomatedHint(roundName, qId, tier, qLabel) {
+      if (!S || S.is_locked) {
+        showToast('🔒 Terminal is locked. Re-entry requires proctor unlock.');
+        return { status: 403, ok: false, error: 'SESSION_LOCKED' };
+      }
+
+      if (S.hintWallet == null) S.hintWallet = 10;
+      const wallet = S.hintWallet;
+      if (wallet < CLUE_COST) {
+        showToast('❌ Insufficient Hint Points (Requires 10 Hint Pts · Balance: ' + wallet + ' pts). Play waiting room mini-games to recharge!');
+        renderCurrentHintBox(roundName, qId);
+        return { status: 400, ok: false, error: 'INSUFFICIENT_POINTS' };
+      }
+
       const list = getHintRequests();
       const grantedList = list.filter(r => r.sid === S.sid && r.qId === qId && r.status === 'GRANTED');
-      const pendingReq = list.find(r => r.sid === S.sid && r.qId === qId && r.status === 'PENDING');
-
-      if (pendingReq) {
-        showToast('⏳ Clue request is already pending System Admin approval.');
-        return { status: 409, ok: false, error: 'ALREADY_PENDING' };
-      }
       if (grantedList.length >= 2) {
-        showToast('💡 Maximum clues reached (2/2) for this challenge.');
+        showToast('💡 Maximum clues (2/2) already unlocked for this challenge.');
         return { status: 409, ok: false, error: 'MAX_CLUES_REACHED' };
       }
 
-      const requestedTier = grantedList.length + 1;
-      const tierTitle = requestedTier === 2 ? 'Clue 2: Direct Walkthrough' : 'Clue 1: Conceptual Nudge';
+      const requestedTier = Number(tier) || (grantedList.length + 1);
+      const tierTitle = requestedTier === 2 ? 'Level 2 Clue: Direct Walkthrough' : 'Level 1 Clue: Conceptual Nudge';
 
       if (!qLabel) {
         if (qId.startsWith('R1_Q')) qLabel = 'Question #' + qId.replace('R1_Q', '');
@@ -13985,32 +14113,18 @@
         else qLabel = qId;
       }
 
-      const curScore = (S.scores.r1 || 0) + (S.scores.r2 || 0) + (S.scores.r3 || 0) + (S.scores.bonus || 0);
+      const clueText = getDefaultHint(qId, requestedTier);
 
-      // SERVER-SIDE / HANDLER STRICT VALIDATION CHECK
-      const check = handleClueRequestPayload({
-        sid: S.sid,
-        qId: qId,
-        tier: requestedTier,
-        currentScore: curScore,
-        cost: CLUE_COST
-      });
-
-      if (!check.ok || check.status === 400) {
-        showToast('❌ ' + check.message);
-        renderCurrentHintBox(roundName, qId);
-        return check;
-      }
-
-      // Only deduct points and forward request if validation passes and score >= 10
-      S.scores.bonus = (S.scores.bonus || 0) - CLUE_COST;
+      // Deduct 10 points immediately from Hint Wallet
+      S.hintWallet -= CLUE_COST;
+      S.hintsUsed = (S.hintsUsed || 0) + 1;
       save();
-      updateRank();
+      updateHintWalletDisplay();
 
-      // Clear previous rejected request for same question if any
-      const cleanList = list.filter(r => !(r.sid === S.sid && r.qId === qId && r.status === 'PENDING'));
-      cleanList.push({
-        id: 'req_' + Date.now(),
+      // Record in Ledger as GRANTED (Automated)
+      const cleanList = list.filter(r => !(r.sid === S.sid && r.qId === qId && r.tier === requestedTier));
+      const record = {
+        id: 'hint_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
         sid: S.sid,
         name: S.player.name,
         dept: S.player.dept,
@@ -14020,16 +14134,33 @@
         qLabel: (qLabel || qId) + ' (' + tierTitle + ')',
         tier: requestedTier,
         cost: CLUE_COST,
-        status: 'PENDING',
-        hintText: '',
-        time: Date.now()
-      });
+        walletBalance: S.hintWallet,
+        status: 'GRANTED',
+        autoGranted: true,
+        hintText: clueText,
+        time: Date.now(),
+        grantedAt: Date.now()
+      };
+      cleanList.push(record);
       saveHintRequests(cleanList);
+
+      // Dispatch to pipeline/radar
+      try {
+        if (typeof CyberArenaPipeline !== 'undefined' && CyberArenaPipeline.requestClue) {
+          CyberArenaPipeline.requestClue(record);
+        }
+      } catch (err) {}
+
       broadcastParticipantHeartbeat();
-      SFX.click();
-      showToast('🙋 ' + tierTitle + ' requested (-10 Points). Awaiting Admin approval...');
+      SFX.success();
+      showToast('💡 ' + tierTitle + ' Unlocked! (-10 Hint Points · ' + S.hintWallet + ' pts remaining)');
       renderCurrentHintBox(roundName, qId);
-      return { status: 200, ok: true, code: 'REQUEST_FORWARDED' };
+      return { status: 200, ok: true, hintText: clueText, walletRemaining: S.hintWallet };
+    }
+
+    // Legacy shim for any direct invocations
+    function requestAdminHint(roundName, qId, qLabel) {
+      return useAutomatedHint(roundName, qId, null, qLabel);
     }
 
     function renderCurrentHintBox(roundName, qId, containerId) {
@@ -14042,14 +14173,11 @@
       const el = $(containerId);
       if (!el) return;
 
-      const curScore = (S && S.scores)
-        ? ((Number(S.scores.r1) || 0) + (Number(S.scores.r2) || 0) + (Number(S.scores.r3) || 0) + (Number(S.scores.bonus) || 0))
-        : 0;
-      const hasEnoughPoints = curScore >= CLUE_COST;
+      const wallet = (S && S.hintWallet != null) ? S.hintWallet : 10;
+      const hasEnough = wallet >= CLUE_COST;
 
       const list = getHintRequests();
       const grantedList = S ? list.filter(r => r.sid === S.sid && r.qId === qId && r.status === 'GRANTED') : [];
-      const pendingReq = S ? list.find(r => r.sid === S.sid && r.qId === qId && r.status === 'PENDING') : null;
 
       let grantedHtml = '';
       if (grantedList.length > 0) {
@@ -14058,131 +14186,104 @@
           const isTier2 = (tierNum === 2);
           const badgeClass = isTier2 ? 'tier-2' : 'tier-1';
           const title = isTier2
-            ? '🔑 CLUE 2 · DIRECT WALKTHROUGH (Completely Easier)'
-            : '💡 CLUE 1 · CONCEPTUAL NUDGE (Slightly Easier)';
+            ? '🔑 LEVEL 2 CLUE · DIRECT WALKTHROUGH'
+            : '💡 LEVEL 1 CLUE · CONCEPTUAL NUDGE';
           return '<div class="hint-granted-box ' + badgeClass + '" style="margin-bottom:10px;">' +
-            '<div class="hint-granted-head"><span>' + title + '</span><span>• ACCESS GRANTED (-10 PTS)</span></div>' +
+            '<div class="hint-granted-head"><span>' + title + '</span><span>• UNLOCKED (-10 PTS)</span></div>' +
             '<div class="hint-granted-text">' + escapeHtml(g.hintText) + '</div>' +
             '</div>';
         }).join('');
       }
 
-      // If 2 clues already granted, no more requests allowed
       if (grantedList.length >= 2) {
         el.innerHTML = grantedHtml +
           '<div class="hint-req-card" style="border-color:#334155; background:rgba(15,23,42,0.6);">' +
-          '<div><b style="color:#38bdf8;">💡 All Clues Unlocked (2/2):</b> <span style="color:#94a3b8;">Both Clue 1 (Conceptual Nudge) and Clue 2 (Direct Walkthrough) are active above.</span></div>' +
-          '<button class="hint-req-btn disabled" disabled style="opacity:0.5; cursor:not-allowed;">🔒 All Clues Unlocked (2/2)</button>' +
-          '</div>';
-        return;
-      }
-
-      if (pendingReq) {
-        const pendingTier = Number(pendingReq.tier || (grantedList.length + 1));
-        const pendingTitle = pendingTier === 2 ? 'Clue 2: Direct Walkthrough' : 'Clue 1: Conceptual Nudge';
-        el.innerHTML = grantedHtml +
-          '<div class="hint-req-card" style="border-color:#f59e0b; background:rgba(44,30,16,0.65);">' +
-          '<div><b style="color:#fbbf24;">⏳ Hint Request Pending:</b> <span style="color:#cbd5e1;">You pledged 10 points for ' + escapeHtml(pendingTitle) + '. Waiting for System Admin approval...</span></div>' +
-          '<button class="hint-req-btn" disabled style="opacity:0.6; cursor:not-allowed;">⏳ Pending Admin Approval</button>' +
+          '<div><b style="color:#38bdf8;">💡 All Clues Unlocked (2/2):</b> <span style="color:#94a3b8;">Both Level 1 (Nudge) and Level 2 (Walkthrough) are active above.</span></div>' +
+          '<div style="font-size:11px; color:#fbbf24; font-family:var(--font-mono); font-weight:700;">🪙 Hint Wallet: ' + wallet + ' pts remaining</div>' +
           '</div>';
         return;
       }
 
       const nextTier = grantedList.length + 1;
-      const isTier2Req = (nextTier === 2);
-      const reqTitle = isTier2Req ? '🔑 Need Clue 2: Direct Walkthrough?' : '💡 Need Clue 1: Conceptual Nudge?';
-      const reqDesc = isTier2Req
-        ? 'Spend 10 points to unlock an explicit, step-by-step walkthrough explaining exactly how to solve this challenge.'
-        : 'Spend 10 points for a gentle conceptual hint pointing in the right direction without revealing the exact solution.';
-      const btnText = isTier2Req
-        ? '🔑 Request Clue 2: Direct Walkthrough (-10 Pts)'
-        : '💡 Request Clue 1: Conceptual Nudge (-10 Pts)';
+      const isTier2 = (nextTier === 2);
+      const clueTitle = isTier2 ? '🔑 Need Level 2 Clue: Direct Walkthrough?' : '💡 Need Level 1 Clue: Conceptual Nudge?';
+      const clueDesc = isTier2
+        ? 'Immediately deducts 10 Hint Points from your wallet to reveal explicit step-by-step guidance.'
+        : 'Immediately deducts 10 Hint Points from your wallet to reveal conceptual guidance.';
+      const btnText = isTier2
+        ? '🔑 Use Hint / Reveal Level 2 Clue (-10 Pts)'
+        : '💡 Use Hint / Reveal Level 1 Clue (-10 Pts)';
 
       let actionHtml;
-      if (hasEnoughPoints) {
-        actionHtml = '<button class="hint-req-btn" data-round="' + escapeHtml(roundName) + '" data-qid="' + escapeHtml(qId) + '" onclick="openClueConfirmModal(this.dataset.round, this.dataset.qid)">' + btnText + '</button>';
+      if (hasEnough) {
+        actionHtml = '<button class="hint-req-btn" data-round="' + escapeHtml(roundName) + '" data-qid="' + escapeHtml(qId) + '" data-tier="' + nextTier + '" onclick="useAutomatedHint(this.dataset.round, this.dataset.qid, Number(this.dataset.tier))">' + btnText + '</button>';
       } else {
         actionHtml = '<div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">' +
-          '<button class="hint-req-btn disabled" disabled style="opacity:0.45; cursor:not-allowed; background:rgba(30,41,59,0.5); border-color:rgba(239,68,68,0.3); color:#94a3b8;" title="Insufficient points (Requires 10 Trust Points)">🔒 ' + btnText + '</button>' +
-          '<small style="color:#f87171; font-size:11px; font-weight:600;">⚠️ Insufficient points (Requires 10 Trust Points)</small>' +
+          '<button class="hint-req-btn disabled" disabled style="opacity:0.45; cursor:not-allowed; background:rgba(30,41,59,0.5); border-color:rgba(239,68,68,0.3); color:#94a3b8;">🔒 ' + btnText + '</button>' +
+          '<small style="color:#f87171; font-size:11px; font-weight:600;">⚠️ Insufficient points (Wallet: ' + wallet + ' pts · Need 10 pts). Win waiting room mini-games to recharge!</small>' +
           '</div>';
       }
 
       el.innerHTML = grantedHtml +
         '<div class="hint-req-card">' +
-        '<div><b style="color:#38bdf8;">' + reqTitle + '</b> <span style="color:#94a3b8;">' + reqDesc + '</span></div>' +
+        '<div>' +
+        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">' +
+        '<b style="color:#38bdf8;">' + clueTitle + '</b>' +
+        '<span style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid #f59e0b; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700;">🪙 Wallet: ' + wallet + ' pts</span>' +
+        '</div>' +
+        '<span style="color:#94a3b8; font-size:12px;">' + clueDesc + '</span>' +
+        '</div>' +
         actionHtml +
         '</div>';
     }
 
     function renderAdminHintConsole() {
-      const body = $('adminHintTableBody');
+      const body = $('adminHintsTableBody');
       if (!body) return;
       const list = getHintRequests();
+
       if (list.length === 0) {
-        body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b; padding:18px;">No hint requests submitted by students yet.</td></tr>';
+        body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b; padding:24px;">No clue requests recorded yet. Clues unlocked by students appear here automatically.</td></tr>';
         return;
       }
 
-      const sorted = list.map((r, i) => ({ ...r, origIdx: i })).sort((a, b) => {
-        if (a.status === 'PENDING' && b.status !== 'PENDING') return -1;
-        if (b.status === 'PENDING' && a.status !== 'PENDING') return 1;
-        return b.time - a.time;
-      });
-
+      const sorted = list.map((r, i) => ({ ...r, origIdx: i })).reverse();
       body.innerHTML = sorted.map(r => {
-        const isGranted = r.status === 'GRANTED';
-        const isPending = r.status === 'PENDING';
-        const isRejected = r.status === 'REJECTED';
+        const isGranted = (r.status === 'GRANTED');
+        const isRejected = (r.status === 'REJECTED');
+        const isPending = !isGranted && !isRejected;
         const tierNum = Number(r.tier || 1);
         const isTier2 = (tierNum === 2);
 
-        let badge = '<span class="status-tag-switch" style="animation:none; background:rgba(245,158,11,0.2); color:#fbbf24; border-color:#f59e0b;" title="Awaiting Admin Review & Approval">⏳ PENDING</span>';
-        if (isGranted) badge = '<span class="status-tag-active" title="Clue granted and revealed to candidate">🟢 GRANTED</span>';
-        else if (isRejected) badge = '<span class="status-tag-disq" title="Request declined and 10 points refunded">🔴 DECLINED</span>';
+        let badge = '<span class="status-tag-active" style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid #10b981;" title="Clue automatically unlocked and revealed">🟢 AUTO-GRANTED</span>';
+        if (isRejected) badge = '<span class="status-tag-disq" title="Request declined and 10 points refunded">🔴 DECLINED</span>';
+        else if (isPending) badge = '<span class="status-tag-switch" style="animation:none; background:rgba(245,158,11,0.2); color:#fbbf24; border-color:#f59e0b;" title="Pending">⏳ PENDING</span>';
 
         const tierBadge = isTier2
-          ? '<span style="display:inline-block; font-size:10px; padding:2px 6px; border-radius:4px; background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid #22c55e; margin-top:3px; font-weight:700;">🔑 Tier 2: Walkthrough</span>'
-          : '<span style="display:inline-block; font-size:10px; padding:2px 6px; border-radius:4px; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid #38bdf8; margin-top:3px; font-weight:700;">💡 Tier 1: Nudge</span>';
+          ? '<span style="display:inline-block; font-size:10px; padding:2px 6px; border-radius:4px; background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid #22c55e; margin-top:3px; font-weight:700;">🔑 Level 2: Walkthrough</span>'
+          : '<span style="display:inline-block; font-size:10px; padding:2px 6px; border-radius:4px; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid #38bdf8; margin-top:3px; font-weight:700;">💡 Level 1: Nudge</span>';
 
-        const defaultClue = r.hintText || getDefaultHint(r.qId, tierNum);
+        const clueContent = r.hintText || getDefaultHint(r.qId, tierNum);
+        const grantedBg = isTier2 ? 'rgba(34,197,94,0.08)' : 'rgba(56,189,248,0.08)';
+        const grantedBorder = isTier2 ? 'rgba(34,197,94,0.25)' : 'rgba(56,189,248,0.25)';
+        const grantedColor = isTier2 ? '#4ade80' : '#38bdf8';
 
-        let clueBox = '';
-        let actionBtns = '';
+        const clueBox = '<div style="font-size:12px; color:' + grantedColor + '; background:' + grantedBg + '; border:1px solid ' + grantedBorder + '; padding:8px 10px; border-radius:4px; white-space:pre-line; line-height:1.5;">' +
+          '<b>Revealed ' + (isTier2 ? 'Level 2 (Walkthrough)' : 'Level 1 (Nudge)') + ':</b><br>' + escapeHtml(clueContent) +
+          '</div>';
 
-        if (isPending) {
-          clueBox = '<div style="display:flex; flex-direction:column; gap:4px;">' +
-            '<textarea id="adminHintInput_' + r.origIdx + '" class="threat-input-sm" rows="3" style="width:100%; background:rgba(15,23,42,0.9); color:#f8fafc; border:1px solid #0284c7; padding:6px 8px; border-radius:4px; font-size:12px; resize:vertical; line-height:1.45; font-family:var(--font-mono);">' + escapeHtml(defaultClue) + '</textarea>' +
-            '<small style="color:#94a3b8; font-size:10px;">Pre-filled with predefined ' + (isTier2 ? 'Tier 2 Walkthrough' : 'Tier 1 Conceptual Nudge') + ' from database. Edit as desired before dispatching.</small>' +
-            '</div>';
+        const actionBtns = '<div style="display:flex; gap:6px;">' +
+          '<button class="btn ghost small" style="padding:4px 8px;" onclick="adminEditGrantedHint(' + r.origIdx + ')">✏ Edit Clue</button>' +
+          '<button class="btn rose small" style="padding:4px 8px;" onclick="adminRevokeHint(' + r.origIdx + ')">Revoke</button>' +
+          '</div>';
 
-          actionBtns = '<div style="display:flex; gap:6px;">' +
-            '<button class="btn solid small" style="background:#22c55e; border-color:#22c55e; padding:5px 12px; font-weight:700;" onclick="adminGrantHint(' + r.origIdx + ')">✔ Accept & Grant</button>' +
-            '<button class="btn rose small" style="padding:5px 10px;" onclick="adminRejectHint(' + r.origIdx + ')">✖ Decline</button>' +
-            '</div>';
-        } else if (isGranted) {
-          const grantedBg = isTier2 ? 'rgba(34,197,94,0.1)' : 'rgba(56,189,248,0.1)';
-          const grantedBorder = isTier2 ? 'rgba(34,197,94,0.3)' : 'rgba(56,189,248,0.3)';
-          const grantedColor = isTier2 ? '#4ade80' : '#38bdf8';
-          clueBox = '<div style="font-size:12px; color:' + grantedColor + '; background:' + grantedBg + '; border:1px solid ' + grantedBorder + '; padding:8px 10px; border-radius:4px; white-space:pre-line; line-height:1.5;">' +
-            '<b>Dispatched ' + (isTier2 ? 'Tier 2 (Walkthrough)' : 'Tier 1 (Nudge)') + ':</b><br>' + escapeHtml(r.hintText) +
-            '</div>';
-
-          actionBtns = '<div style="display:flex; gap:6px;">' +
-            '<button class="btn ghost small" style="padding:4px 8px;" onclick="adminEditGrantedHint(' + r.origIdx + ')">✏ Edit Clue</button>' +
-            '<button class="btn rose small" style="padding:4px 8px;" onclick="adminRevokeHint(' + r.origIdx + ')">Revoke</button>' +
-            '</div>';
-        } else {
-          clueBox = '<span style="color:#94a3b8; font-size:12px;">Request was declined (cost refunded).</span>';
-          actionBtns = '<button class="btn ghost small" style="padding:4px 8px;" onclick="adminGrantHint(' + r.origIdx + ')">🔄 Re-Approve</button>';
-        }
-
-        const timeStr = new Date(r.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const timeStr = new Date(r.time || r.grantedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const walletBal = r.walletBalance != null ? r.walletBalance + ' pts remaining' : '10 Pts Deducted';
 
         return '<tr>' +
-          '<td><b>' + escapeHtml(r.name) + '</b><br><small style="color:#94a3b8;">' + escapeHtml(r.dept) + ' · Yr ' + escapeHtml(r.year) + '</small><br><span style="font-size:10px; color:#64748b;">' + timeStr + '</span></td>' +
+          '<td><b>' + escapeHtml(r.name) + '</b><br><small style="color:#94a3b8;">' + escapeHtml(r.dept) + ' · Yr ' + escapeHtml(r.year) + ' · <span class="student-sid-pill">' + escapeHtml(r.sid) + '</span></small><br><span style="font-size:10px; color:#64748b;">' + timeStr + '</span></td>' +
           '<td><span class="threat-badge badge-secure">' + escapeHtml(r.round) + '</span><br><b style="font-size:12px; color:var(--cyan);">' + escapeHtml(r.qLabel) + '</b><br>' + tierBadge + '</td>' +
-          '<td>' + badge + '<br><small style="color:#f59e0b; font-size:10px;">Cost: 10 Pts Deducted</small></td>' +
+          '<td>' + badge + '<br><small style="color:#f59e0b; font-size:10px; font-weight:700;">🪙 ' + walletBal + '</small></td>' +
           '<td>' + clueBox + '</td>' +
           '<td>' + actionBtns + '</td>' +
           '</tr>';
@@ -14218,12 +14319,12 @@
         const tierNum = Number(r.tier || 1);
         showAppModal({
           mode: 'prompt',
-          title: 'GRANT CLUE APPROVAL (' + (tierNum === 2 ? 'TIER 2 WALKTHROUGH' : 'TIER 1 NUDGE') + ')',
+          title: 'CUSTOM CLUE DISPATCH (' + (tierNum === 2 ? 'LEVEL 2 WALKTHROUGH' : 'LEVEL 1 NUDGE') + ')',
           icon: '💡',
           message: 'Enter specific clue to reveal to ' + r.name + ' (' + (r.dept || 'Candidate') + ') for ' + r.qLabel + ' (' + r.round + '):',
           inputLabel: 'Predefined / Custom Clue Text:',
           defaultValue: getDefaultHint(r.qId, tierNum),
-          confirmText: '✔ Approve & Dispatch',
+          confirmText: '✔ Dispatch Clue',
           cancelText: 'Cancel',
           onConfirm: (customClue) => {
             executeGrant(customClue);
@@ -14241,12 +14342,12 @@
       saveHintRequests(list);
 
       if (S && S.sid === r.sid) {
-        S.scores.bonus = (S.scores.bonus || 0) + 10;
+        S.hintWallet = (S.hintWallet || 0) + CLUE_COST;
         save();
-        updateRank();
+        updateHintWalletDisplay();
       }
 
-      showToast('Declined clue request for ' + r.name + ' (10 points refunded).');
+      showToast('Declined clue request for ' + r.name + ' (10 Hint Points refunded).');
       renderAdminHintConsole();
     }
 
@@ -14259,7 +14360,7 @@
       showToast('Revoked clue access for ' + r.name + '.');
       renderAdminHintConsole();
     }
-
+    
     function adminEditGrantedHint(idx) {
       const list = getHintRequests();
       const r = list[idx];
@@ -14733,7 +14834,10 @@
     syncMuteIcon();
     try {
       const restored = restoreSession();
-      if (window.location && window.location.search && (window.location.search.includes('admin=true') || window.location.search.includes('role=admin'))) {
+      if (window.location && (
+        (window.location.search && (window.location.search.includes('admin=true') || window.location.search.includes('role=admin'))) ||
+        (window.location.pathname && (window.location.pathname.toLowerCase().includes('admin.html') || window.location.pathname.toLowerCase().endsWith('/admin')))
+      )) {
         enterAdmin();
       } else if (!restored) {
         go('screen-landing');
@@ -15094,7 +15198,7 @@
             fromRound,
             newRound: toRound,
             targetRound: toRound,
-            durationSeconds: toRound === 3 ? 3600 : 1800,
+            durationSeconds: ROUND_SECONDS[toRound] || 2700,
             roundStartedAt: Date.now(),
             startedAt: Date.now(),
             proctorName: 'Proctor SOC Command',
@@ -15106,7 +15210,7 @@
             fromRound,
             newRound: toRound,
             targetRound: toRound,
-            durationSeconds: toRound === 3 ? 3600 : 1800,
+            durationSeconds: ROUND_SECONDS[toRound] || 2700,
             roundStartedAt: Date.now(),
             proctorName: 'Proctor SOC Command'
           });
@@ -15114,7 +15218,7 @@
             type: 'ROUND_FORCE_ADVANCED',
             fromRound,
             newRound: toRound,
-            durationSeconds: toRound === 3 ? 3600 : 1800,
+            durationSeconds: ROUND_SECONDS[toRound] || 2700,
             roundStartedAt: Date.now(),
             proctorName: 'Proctor SOC Command'
           });
