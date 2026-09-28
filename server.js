@@ -528,8 +528,8 @@ function handleAdvanceRound(fromRound, toRound, proctorName, forceSubmitActive) 
   toRound = Number(toRound || (fromRound + 1));
   proctorName = proctorName || 'Admin SOC Command';
 
-  const roundDurations = { 1: 1800, 2: 1800, 3: 3600 };
-  const newDuration = roundDurations[toRound] || 1800;
+  const roundDurations = { 1: 1800, 2: 2700, 3: 2700 };
+  const newDuration = roundDurations[toRound] || 2700;
 
   arenaTournamentState.currentRound = toRound;
   arenaTournamentState.roundDuration = newDuration;
@@ -1103,10 +1103,13 @@ const server = http.createServer(async (req, res) => {
         qLabel: data.qLabel,
         tier: tier,
         cost: data.cost || 10,
-        status: 'PENDING',
+        status: data.status || (data.autoGranted ? 'GRANTED' : 'PENDING'),
+        autoGranted: data.autoGranted ?? (data.status === 'GRANTED'),
+        walletBalance: data.walletBalance,
         suggestedClue: suggested,
         hintText: data.hintText || suggested,
-        time: Date.now()
+        time: data.time || Date.now(),
+        grantedAt: data.grantedAt || (data.status === 'GRANTED' ? Date.now() : null)
       };
 
       hintRequests.set(reqId, hintObj);
@@ -1195,7 +1198,7 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/leaderboard') {
     recalculateLeaderboard();
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true, count: leaderboardCache.length, rows: leaderboardCache }));
+    res.end(JSON.stringify({ success: true, count: leaderboardCache.length, rows: leaderboardCache, leaderboard: leaderboardCache }));
     return;
   }
 
@@ -1456,10 +1459,13 @@ server.on('upgrade', (req, socket, head) => {
               qLabel: msg.data.qLabel,
               tier: tier,
               cost: msg.data.cost || 10,
-              status: 'PENDING',
+              status: msg.data.status || (msg.data.autoGranted ? 'GRANTED' : 'PENDING'),
+              autoGranted: msg.data.autoGranted ?? (msg.data.status === 'GRANTED'),
+              walletBalance: msg.data.walletBalance,
               suggestedClue: suggested,
               hintText: msg.data.hintText || suggested,
-              time: Date.now()
+              time: msg.data.time || Date.now(),
+              grantedAt: msg.data.grantedAt || (msg.data.status === 'GRANTED' ? Date.now() : null)
             };
             hintRequests.set(reqId, hintObj);
             broadcastToProctors('CLUE_REQUESTED', hintObj);
