@@ -9640,10 +9640,8 @@
       // Reset filters to 'all' so no new candidates are hidden by default filters
       if (typeof adminResetFilters === 'function') adminResetFilters();
 
-      // Activate simulation by default so admin room is never empty!
-      adminSimActive = true;
-      seedSimulatedStudents();
-      startAdminSimulationLoop();
+      adminSimActive = false;
+      if (typeof clearSimulatedStudents === 'function') clearSimulatedStudents();
 
       // Show proctor surveillance tab by default
       adminSwitchTab('proctor');
@@ -10071,21 +10069,11 @@
 
       if (demo) {
         const liveRoster = getLiveRoster();
-        const liveList = Object.values(liveRoster);
-        if (liveList && liveList.length > 0) {
-          rows = liveList;
-        } else {
-          rows = [
-            { sid: 'sim_varma', name: 'Dr. S. Varma', dept: 'CSE', year: 'IV', r1: 25, r2: 15, r3: 5, bonus: 3, status: 'COMPLETED', violations: 0, durationSeconds: 1710, accuracy_rate: 100 },
-            { sid: 'sim_sharma', name: 'A. Sharma', dept: 'CSBS', year: 'III', r1: 24, r2: 11, r3: 4, bonus: 0, status: 'FINISHED', violations: 0, durationSeconds: 1920, accuracy_rate: 86.7 },
-            { sid: 'sim_iyer', name: 'R. Iyer', dept: 'CSE', year: 'II', r1: 22, r2: 13, r3: 3, bonus: 0, status: 'FINISHED', violations: 1, durationSeconds: 2040, accuracy_rate: 84.4 },
-            { sid: 'sim_menon', name: 'P. Menon', dept: 'CSBS', year: 'IV', r1: 19, r2: 9, r3: 2, bonus: 0, status: 'IN PROGRESS', violations: 0, durationSeconds: 2200, accuracy_rate: 66.7 }
-          ];
-        }
+        const liveList = Object.values(liveRoster).filter(r => !r.isSim && !(r.sid && r.sid.startsWith('sim_')));
+        rows = liveList;
       }
 
-      if (tag) tag.style.display = demo ? 'inline-block' : 'none';
-      if (tag) tag.textContent = configured ? 'OFFLINE — LOCAL RADAR LEADERBOARD' : 'RADAR LEADERBOARD (LIVE AGGREGATION)';
+      if (tag) tag.style.display = 'none';
 
       // Calculate totals and apply standard 4-tier tie-breaker
       rows.forEach(r => {
@@ -10106,6 +10094,10 @@
       });
 
       if (tbody) {
+        if (rows.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:#94a3b8; padding:32px;"><b style="font-size:14px; color:#cbd5e1;">No Operatives Registered Yet</b><br><small style="color:#64748b;">Live participant scores and rankings will appear here as candidates submit their assessments.</small></td></tr>';
+          return;
+        }
         tbody.innerHTML = rows.map((r, i) => {
           let rankCls = '';
           let rankBadge = '#' + (i + 1);
@@ -11810,6 +11802,7 @@
         const roster = {};
         for (const [sid, op] of Object.entries(raw)) {
           if (!op || typeof op !== 'object') continue;
+          if (sid.startsWith('sim_') || op.isSim) continue;
           const strikes = op.strikes != null ? Number(op.strikes) : (op.violations != null ? Number(op.violations) : (op.strikes_count != null ? Number(op.strikes_count) : 0));
           const score = op.score != null ? Number(op.score) : ((op.r1 || 0) + (op.r2 || 0) + (op.r3 || 0) + (op.bonus || 0));
           const isLocked = !!(op.isLocked || op.is_locked || strikes >= 3 || op.status === 'LOCKED');
@@ -12650,8 +12643,8 @@
       if (adminSimActive) {
         seedSimulatedStudents();
         startAdminSimulationLoop();
-        adminLogSecurityEvent('info', 'Demonstration mode activated. 5 simulated candidate terminals online.');
-        showToast('🧪 Live Student Simulation started! 5 active test-takers loaded.');
+        adminLogSecurityEvent('info', 'Demonstration mode activated.');
+        showToast('🧪 Live Student Simulation started.');
       } else {
         stopAdminSimulationLoop();
         clearSimulatedStudents();
@@ -12664,255 +12657,15 @@
     }
 
     function seedSimulatedStudents() {
-      const roster = getLiveRoster();
-      const now = Date.now();
-
-      // 1. Clean Candidate (0 Strikes)
-      roster['sim_sharma'] = {
-        sid: 'sim_sharma',
-        name: 'A. Sharma',
-        dept: 'CSBS',
-        year: 'III',
-        round: 'R3',
-        currentLocation: 'Round 3 · Investigation Q3: Web Access Logs',
-        qStartTime: now - 42000,
-        qTitle: '3. What IP address is associated with the brute force authentication attempt?',
-        qOptions: [],
-        selectedOptionIdx: null,
-        inputText: '192.168.1.105',
-        score: 39,
-        r1: 24,
-        r2: 11,
-        r3: 4,
-        bonus: 0,
-        violations: 0,
-        strikes_count: 0,
-        lifetime_violations: 0,
-        is_locked: false,
-        pardon_history: [],
-        lastViolationTime: 0,
-        isTabHidden: false,
-        lastSeen: now - 800,
-        isSim: true,
-        history: [
-          { time: now - 480000, desc: 'Candidate authenticated · Entered Arena' },
-          { time: now - 320000, desc: 'Completed Round 1 (24 pts)' },
-          { time: now - 140000, desc: 'Completed Round 2 (11 pts)' },
-          { time: now - 42000, desc: 'Analyzing Apache access.log for IP brute force traces' },
-          { time: now - 15000, desc: 'Drafted hypothesis: "192.168.1.105" (54 attempts)' }
-        ]
-      };
-
-      // 2. Candidate with 1 Strike (Tab Switch Warning)
-      roster['sim_iyer'] = {
-        sid: 'sim_iyer',
-        name: 'R. Iyer',
-        dept: 'CSE',
-        year: 'II',
-        round: 'R2',
-        currentLocation: 'Round 2 · Password Hash #5 (Rainbow Table)',
-        qStartTime: now - 58000,
-        qTitle: 'Decode this pre-computed MD5 digest using rainbow attack analysis:',
-        qOptions: [],
-        selectedOptionIdx: null,
-        inputText: 'rainbow',
-        score: 38,
-        r1: 22,
-        r2: 13,
-        r3: 3,
-        bonus: 0,
-        violations: 1,
-        strikes_count: 1,
-        lifetime_violations: 1,
-        is_locked: false,
-        pardon_history: [],
-        lastViolationTime: now - 14000,
-        isTabHidden: true,
-        lastSeen: now - 14000,
-        isSim: true,
-        history: [
-          { time: now - 450000, desc: 'Entered Arena' },
-          { time: now - 220000, desc: 'Finished Round 1 (22 pts)' },
-          { time: now - 58000, desc: 'Solving Password Challenge #5' },
-          { time: now - 14000, desc: '⚠️ TAB SWITCH DETECTED: Window blurred to external application! (Strike 1/3 logged)' }
-        ]
-      };
-
-      // 3. Candidate with Pending Hint Request
-      roster['sim_menon'] = {
-        sid: 'sim_menon',
-        name: 'P. Menon',
-        dept: 'CSBS',
-        year: 'IV',
-        round: 'R1',
-        currentLocation: 'Round 1 · Q14: Ransomware Vector Analysis',
-        qStartTime: now - 45000,
-        qTitle: 'Which of the following is the most prevalent vector for corporate ransomware delivery in 2026?',
-        qOptions: [
-          'Encrypted Malicious Email Attachment (Phishing)',
-          'Direct physical bad-USB insertion',
-          'Tampered open-source HDMI cable',
-          'Satellite dish signal interception'
-        ],
-        selectedOptionIdx: 0,
-        inputText: null,
-        score: 30,
-        r1: 19,
-        r2: 9,
-        r3: 2,
-        bonus: 0,
-        violations: 0,
-        strikes_count: 0,
-        lifetime_violations: 0,
-        is_locked: false,
-        pardon_history: [],
-        lastViolationTime: 0,
-        isTabHidden: false,
-        lastSeen: now - 1200,
-        isSim: true,
-        history: [
-          { time: now - 350000, desc: 'Identity verified · Started Round 1' },
-          { time: now - 180000, desc: 'Solving network hygiene questions' },
-          { time: now - 45000, desc: 'Reading Q14: Ransomware vectors' },
-          { time: now - 22000, desc: 'Selected Option A: "Encrypted Malicious Email Attachment"' },
-          { time: now - 10000, desc: '🙋 Pledged 10 Trust Points for Admin Clue on R1_Q14' }
-        ]
-      };
-
-      // 4. Candidate Locked Out (3/3 Strikes - Demonstrating Lockdown & Proctor Unlock Flow)
-      roster['sim_das'] = {
-        sid: 'sim_das',
-        name: 'S. Das',
-        dept: 'CSBS',
-        year: 'IV',
-        round: 'R1',
-        currentLocation: '⛔ Terminal Locked (Proctor Review Required)',
-        qStartTime: now - 110000,
-        qTitle: 'Packet Header Tampering Investigation',
-        qOptions: [],
-        selectedOptionIdx: null,
-        inputText: null,
-        score: 16,
-        r1: 16,
-        r2: 0,
-        r3: 0,
-        bonus: 0,
-        violations: 3,
-        strikes_count: 3,
-        lifetime_violations: 3,
-        is_locked: true,
-        lock_reason: 'Tab switch or unauthorized window change (3/3 strikes)',
-        pardon_history: [],
-        status: 'LOCKED',
-        lastViolationTime: now - 28000,
-        isTabHidden: false,
-        lastSeen: now - 28000,
-        isSim: true,
-        history: [
-          { time: now - 380000, desc: 'Candidate authenticated · Entered Round 1' },
-          { time: now - 210000, desc: '⚠️ TAB SWITCH 1: Browser minimized during exam (Strike 1/3)' },
-          { time: now - 120000, desc: '⚠️ TAB SWITCH 2: External browser tab opened (Strike 2/3)' },
-          { time: now - 28000, desc: '🔒 STRIKE 3/3: Maximum focus violations reached. Terminal locked out.' }
-        ]
-      };
-
-      // 5. Waiting Room Mini-Games Player
-      roster['sim_nair'] = {
-        sid: 'sim_nair',
-        name: 'Priya Nair',
-        dept: 'IT',
-        year: 'III',
-        round: 'WAITING',
-        currentLocation: 'Waiting Room · ThreatGEN: Red vs Blue (Turn 6)',
-        qStartTime: now - 95000,
-        qTitle: 'ThreatGEN Simulation: Active Infiltration of Industrial SCADA Zone',
-        qOptions: [],
-        selectedOptionIdx: null,
-        inputText: null,
-        score: 20,
-        r1: 0,
-        r2: 0,
-        r3: 0,
-        bonus: 20,
-        violations: 0,
-        strikes_count: 0,
-        lifetime_violations: 0,
-        is_locked: false,
-        pardon_history: [],
-        lastViolationTime: 0,
-        isTabHidden: false,
-        lastSeen: now - 1800,
-        isSim: true,
-        history: [
-          { time: now - 200000, desc: 'Entered Waiting Room early' },
-          { time: now - 110000, desc: 'Won ThreatGEN Infiltration (+10 Bonus Trust Points)' },
-          { time: now - 35000, desc: 'Won ThreatGEN Defense (+10 Bonus Trust Points, Total 20/50 Pts)' }
-        ]
-      };
-
-      // 6. Completed Candidate (Demonstrating Completed Lifecycle & Leaderboard State)
-      roster['sim_varma'] = {
-        sid: 'sim_varma',
-        name: 'Dr. S. Varma',
-        dept: 'CSE',
-        year: 'IV',
-        round: 'R3',
-        currentLocation: '🏁 Exam Completed & Submitted',
-        qStartTime: now - 1710000,
-        qTitle: 'Final Submission Verified · Total Score: 48 pts',
-        qOptions: [],
-        selectedOptionIdx: null,
-        inputText: null,
-        score: 48,
-        r1: 25,
-        r2: 15,
-        r3: 5,
-        bonus: 3,
-        violations: 0,
-        strikes_count: 0,
-        lifetime_violations: 0,
-        durationSeconds: 1710,
-        completedAt: now - 300000,
-        completedTimeStr: '28:30',
-        is_locked: false,
-        pardon_history: [],
-        status: 'COMPLETED',
-        lastViolationTime: 0,
-        isTabHidden: false,
-        lastSeen: now - 300000,
-        isSim: true,
-        history: [
-          { time: now - 1710000, desc: 'Candidate authenticated · Entered Arena' },
-          { time: now - 1200000, desc: 'Finished Round 1: Cyber Quiz Master (25/25 pts)' },
-          { time: now - 700000, desc: 'Finished Round 2: Cyber Arcade (15/15 pts)' },
-          { time: now - 300000, desc: '🏁 Final Case Study submitted. Total Score: 48 pts (Duration: 28:30)' }
-        ]
-      };
-
-      saveLiveRoster(roster);
-      const hints = getHintRequests();
-      if (!hints.find(h => h.sid === 'sim_menon' && h.qId === 'R1_Q14')) {
-        hints.push({
-          id: 'req_sim_menon',
-          sid: 'sim_menon',
-          name: 'P. Menon',
-          dept: 'CSBS',
-          year: 'IV',
-          round: 'Round 1',
-          qId: 'R1_Q14',
-          qLabel: 'Q14: Ransomware Vectors',
-          cost: 10,
-          status: 'PENDING',
-          hintText: '',
-          time: now - 10000
-        });
-        saveHintRequests(hints);
+      // Clean no-op to ensure zero hardcoded mock/dummy candidates exist
+      if (typeof fetchServerStudentsData === 'function') {
+        fetchServerStudentsData();
       }
     }
 
     function clearSimulatedStudents() {
       const roster = getLiveRoster();
-      Object.keys(roster).forEach(k => { if (roster[k].isSim) delete roster[k]; });
+      Object.keys(roster).forEach(k => { if (roster[k].isSim || k.startsWith('sim_')) delete roster[k]; });
       saveLiveRoster(roster);
 
       const hints = getHintRequests().filter(h => !h.sid.startsWith('sim_'));
@@ -12923,32 +12676,14 @@
       if (adminSimTimer) clearInterval(adminSimTimer);
       adminSimTimer = setInterval(() => {
         if (!adminSimActive) return;
-        const roster = getLiveRoster();
-        const now = Date.now();
-
-        if (roster['sim_iyer']) {
-          if (roster['sim_iyer'].isTabHidden && (now - roster['sim_iyer'].lastViolationTime > 16000)) {
-            roster['sim_iyer'].isTabHidden = false;
-            roster['sim_iyer'].history.push({ time: now, desc: '🟢 Candidate returned and focused challenge window.' });
-            adminLogSecurityEvent('info', 'FOCUS RESTORED: R. Iyer returned to challenge window.');
-          }
-          roster['sim_iyer'].lastSeen = now;
-        }
-
-        if (roster['sim_menon']) roster['sim_menon'].lastSeen = now;
-        if (roster['sim_sharma']) roster['sim_sharma'].lastSeen = now;
-        if (roster['sim_nair']) roster['sim_nair'].lastSeen = now;
-        if (roster['sim_das']) roster['sim_das'].lastSeen = now;
-
-        saveLiveRoster(roster);
-
         if (currentScreenIs('screen-admin')) {
-          renderAdminProctorConsole();
-          if (activeInspectedSid && roster[activeInspectedSid]) {
-            renderStudentInspectContent(roster[activeInspectedSid]);
+          if (typeof fetchServerStudentsData === 'function') {
+            fetchServerStudentsData();
+          } else {
+            renderAdminProctorConsole();
           }
         }
-      }, 3500);
+      }, 5000);
     }
 
     function stopAdminSimulationLoop() {
@@ -13143,8 +12878,8 @@
         if (students.length === 0) {
           grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:36px 18px; background:rgba(15,23,42,0.6); border:1px dashed #334155; border-radius:12px;">' +
             '<div style="font-size:32px; margin-bottom:8px;">📡</div>' +
-            '<b style="color:#94a3b8; font-size:13px;">No active operatives detected on the radar.</b><br>' +
-            '<small style="color:#64748b;">Click <b>"🧪 Simulate Live Students (Demo)"</b> above to load candidate surveillance terminals.</small>' +
+            '<b style="color:#94a3b8; font-size:14px;">No Operatives Registered Yet</b><br>' +
+            '<small style="color:#64748b;">Live participant records will appear in real time once candidates log in or data syncs from Google Sheet.</small>' +
             '</div>';
         } else if (filtered.length === 0) {
           grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:36px 18px; background:rgba(15,23,42,0.6); border:1px dashed #334155; border-radius:12px;">' +
@@ -13285,7 +13020,7 @@
       // Render Detailed Table View
       if (body) {
         if (students.length === 0) {
-          body.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b; padding:24px;">No active students detected on the network.</td></tr>';
+          body.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b; padding:24px;"><b>No Operatives Registered Yet</b> (Live candidate records will appear here once connected).</td></tr>';
           return;
         }
         if (filtered.length === 0) {
