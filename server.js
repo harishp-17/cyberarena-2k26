@@ -770,7 +770,26 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 6b. Participant / Session Deletion Controller (DELETE /api/participants/:id)
+  // 6b. Direct Candidate Alert Controller (POST /api/alerts/send)
+  if (req.method === 'POST' && (pathname === '/api/alerts/send' || pathname === '/api/alerts/direct')) {
+    try {
+      const body = await parseJsonBody(req).catch(() => ({}));
+      const sid = body.targetSid || body.candidateId || body.sid;
+      const text = body.text || body.message || body.alert_message || 'Focus on your test.';
+      if (sid) {
+        sendToCandidate(sid, 'ADMIN_DIRECT_ALERT', { ...body, text, targetSid: sid });
+      }
+      broadcastToProctors('ADMIN_DIRECT_ALERT', { ...body, text, targetSid: sid });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+    }
+    return;
+  }
+
+  // 6c. Participant / Session Deletion Controller (DELETE /api/participants/:id)
   const isDeleteParticipantRoute =
     (req.method === 'DELETE' && (pathname.startsWith('/api/participants/') || pathname.startsWith('/api/sessions/'))) ||
     (req.method === 'DELETE' && (pathname === '/api/participants' || pathname === '/api/sessions')) ||
@@ -1282,6 +1301,12 @@ server.on('upgrade', (req, socket, head) => {
             hintRequests.set(reqId, hint);
             sendToCandidate(hint.sid, 'ADMIN_CLUE_DISPATCHED', hint);
             broadcastToProctors('CLUE_DISPATCHED', hint);
+          } else if (msg.type === 'ADMIN_DIRECT_ALERT' || msg.type === 'DIRECT_WARNING' || msg.type === 'CANDIDATE_ALERT') {
+            const sid = (msg.data && (msg.data.targetSid || msg.data.candidateId || msg.data.sid)) || '';
+            if (sid) {
+              sendToCandidate(sid, 'ADMIN_DIRECT_ALERT', msg.data);
+            }
+            broadcastToProctors('ADMIN_DIRECT_ALERT', msg.data);
           } else if (msg.type === 'CANDIDATE_PARDONED') {
             const sid = msg.data.candidateId || msg.data.sid;
             const session = liveSessions.get(sid);
