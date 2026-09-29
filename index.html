@@ -12818,7 +12818,8 @@
     function renderAdminProctorConsole() {
       const grid = $('adminStudentsCardsGrid');
       const body = $('adminProctorTableBody');
-      const roster = getLiveRoster();
+      // Strict Server-Driven Roster Rendering for Dashboard Cards
+      const roster = window.operativesRoster || {};
       const hints = getHintRequests();
       const now = Date.now();
 
@@ -13504,6 +13505,9 @@
               delete currentRoster[sid];
               saveLiveRoster(currentRoster);
             }
+          }
+          if (window.operativesRoster && window.operativesRoster[sid]) {
+            delete window.operativesRoster[sid];
           }
 
           // Clean up hint requests for this candidate
