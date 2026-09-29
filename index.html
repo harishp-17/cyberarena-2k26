@@ -6785,7 +6785,8 @@
                 <use href="#i-volume-high" />
               </svg></i>
           </button>
-          <div class="status-pill hint-wallet-pill" id="headerHintWallet" style="display:none; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; font-family:var(--font-mono); font-weight:700; font-size:12px; padding:3px 10px; border-radius:20px;">
+          <div class="status-pill hint-wallet-pill" id="headerHintWallet"
+            style="display:none; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; font-family:var(--font-mono); font-weight:700; font-size:12px; padding:3px 10px; border-radius:20px;">
             <span>🪙</span> <span id="headerHintPoints">10 Hint Pts</span>
           </div>
           <div class="status-pill">
@@ -9649,7 +9650,7 @@
       // UNIFY ADMIN DATA SOURCE: Hydrate all server students from Google Sheet (Code.gs)
       fetchServerStudentsData().then(rows => {
         if (rows && rows.length > 0) applyServerDataToRoster(rows);
-      }).catch(() => {});
+      }).catch(() => { });
 
       // Hydrate all database candidates & subscribe to proctor surveillance room
       if (typeof CyberArenaPipeline !== 'undefined') {
@@ -10009,12 +10010,13 @@
 
     function applyServerDataToRoster(rows) {
       if (!Array.isArray(rows)) return;
-      const roster = getLiveRoster();
+      const oldRoster = getLiveRoster();
       const now = Date.now();
+      const newRoster = {};
 
       if (rows.length === 0) {
-        saveLiveRoster(roster);
-        window.operativesRoster = roster;
+        saveLiveRoster({});
+        window.operativesRoster = {};
         if (typeof renderAdminProctorConsole === 'function') renderAdminProctorConsole();
         if (typeof updateGlobalMemberCount === 'function') updateGlobalMemberCount();
         return;
@@ -10029,9 +10031,9 @@
         const strikes = r.strikes != null ? Number(r.strikes) : (r.violations != null ? Number(r.violations) : (r.strikes_count != null ? Number(r.strikes_count) : 0));
         const score = Number(r.total != null ? r.total : (r.score != null ? r.score : ((Number(r.r1) || 0) + (Number(r.r2) || 0) + (Number(r.r3) || 0) + (Number(r.bonus) || 0))));
         const isLocked = !!(r.is_locked || r.isLocked || strikes >= 3 || r.status === 'LOCKED');
-        const existing = roster[sid] || {};
+        const existing = oldRoster[sid] || {};
 
-        roster[sid] = {
+        newRoster[sid] = {
           ...existing,
           ...r,
           id: sid,
@@ -10061,8 +10063,8 @@
         };
       });
 
-      saveLiveRoster(roster);
-      window.operativesRoster = roster;
+      saveLiveRoster(newRoster);
+      window.operativesRoster = newRoster;
 
       if (typeof renderAdminProctorConsole === 'function') renderAdminProctorConsole();
       if (typeof updateGlobalMemberCount === 'function') updateGlobalMemberCount();
@@ -10076,9 +10078,9 @@
       if (configured) {
         try {
           const serverRows = await fetchServerStudentsData();
-          if (serverRows && serverRows.length > 0) {
+          if (serverRows !== null && Array.isArray(serverRows)) {
             rows = serverRows;
-            // UNIFY ADMIN DATA SOURCE: Update live roster with server data and immediately re-render roster cards
+            // UNIFY ADMIN DATA SOURCE: Full sync and purge ghost candidates on every fetch
             applyServerDataToRoster(rows);
           } else {
             demo = true;
@@ -11915,11 +11917,11 @@
       if (typeof location === 'undefined') return true;
       const host = (location.hostname || '').toLowerCase();
       return host.includes('vercel.app') ||
-             host.includes('github.io') ||
-             host.includes('netlify.app') ||
-             host.includes('pages.dev') ||
-             location.protocol === 'file:' ||
-             (host !== 'localhost' && host !== '127.0.0.1' && !location.port);
+        host.includes('github.io') ||
+        host.includes('netlify.app') ||
+        host.includes('pages.dev') ||
+        location.protocol === 'file:' ||
+        (host !== 'localhost' && host !== '127.0.0.1' && !location.port);
     })();
 
     async function verifyDatabaseSync() {
@@ -11978,7 +11980,7 @@
           const uiStatus = String(uiOp.status || '').toUpperCase();
           if (dbStatus && uiStatus && dbStatus !== uiStatus) {
             if (!((dbStatus === 'ONLINE' || dbStatus === 'IN_PROGRESS' || dbStatus === 'STATUS_PENDING') &&
-                  (uiStatus === 'ONLINE' || uiStatus === 'IN_PROGRESS' || uiStatus === 'STATUS_PENDING'))) {
+              (uiStatus === 'ONLINE' || uiStatus === 'IN_PROGRESS' || uiStatus === 'STATUS_PENDING'))) {
               const msg = `SYNC ERROR: DB has status "${dbStatus}" for User ID ${sid}, but UI shows "${uiStatus}"`;
               console.error(msg);
               mismatches.push({ sid, field: 'status', db: dbStatus, ui: uiStatus, message: msg });
@@ -13523,14 +13525,14 @@
             await fetch(`${serverBase}/api/participants/${encodeURIComponent(sid)}`, {
               method: 'DELETE',
               headers: { 'Content-Type': 'application/json' }
-            }).catch(() => {});
+            }).catch(() => { });
           }
 
           // 5. Also sync to Google DB if available
           if (typeof GOOGLE_DATABASE_URL !== 'undefined' && GOOGLE_DATABASE_URL && !GOOGLE_DATABASE_URL.startsWith('PASTE_')) {
             try {
-              fetch(`${GOOGLE_DATABASE_URL}?action=delete&sid=${encodeURIComponent(sid)}`, { mode: 'no-cors' }).catch(() => {});
-            } catch(e) {}
+              fetch(`${GOOGLE_DATABASE_URL}?action=delete&sid=${encodeURIComponent(sid)}`, { mode: 'no-cors' }).catch(() => { });
+            } catch (e) { }
           }
 
           // 6. Refresh UI components immediately without page reload
@@ -13796,9 +13798,9 @@
 
       const tierDesc = isTier2
         ? '• <b>Level 2: Direct Walkthrough</b> instantly reveals explicit, step-by-step guidance directly in your panel.<br>' +
-          '• Deducts 10 points immediately from your Hint Wallet (Zero waiting for admin approval).'
+        '• Deducts 10 points immediately from your Hint Wallet (Zero waiting for admin approval).'
         : '• <b>Level 1: Conceptual Nudge</b> points you in the right direction without revealing the complete solution.<br>' +
-          '• Deducts 10 points immediately from your Hint Wallet (Zero waiting for admin approval).';
+        '• Deducts 10 points immediately from your Hint Wallet (Zero waiting for admin approval).';
 
       pendingClueRequest = { roundName, qId, qLabel, tier: requestedTier };
 
@@ -13926,7 +13928,7 @@
         if (typeof CyberArenaPipeline !== 'undefined' && CyberArenaPipeline.requestClue) {
           CyberArenaPipeline.requestClue(record);
         }
-      } catch (err) {}
+      } catch (err) { }
 
       broadcastParticipantHeartbeat();
       SFX.success();
@@ -14137,7 +14139,7 @@
       showToast('Revoked clue access for ' + r.name + '.');
       renderAdminHintConsole();
     }
-    
+
     function adminEditGrantedHint(idx) {
       const list = getHintRequests();
       const r = list[idx];
