@@ -2343,8 +2343,10 @@
 
     /* ABSOLUTE ADMIN / PROCTOR IMMUNITY GUARD: Never display candidate lockout on admin screens */
     #screen-admin.active~#modalCandidateLockout,
+    #screen-admin.active~#modalSessionTerminated,
     #screen-admin.active~#modalTabWarn,
     body:has(#screen-admin.active) #modalCandidateLockout,
+    body:has(#screen-admin.active) #modalSessionTerminated,
     body:has(#screen-admin.active) #modalTabWarn,
     .admin-screen.active~.unclosable-lockout {
       display: none !important;
@@ -6785,8 +6787,7 @@
                 <use href="#i-volume-high" />
               </svg></i>
           </button>
-          <div class="status-pill hint-wallet-pill" id="headerHintWallet"
-            style="display:none; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; font-family:var(--font-mono); font-weight:700; font-size:12px; padding:3px 10px; border-radius:20px;">
+          <div class="status-pill hint-wallet-pill" id="headerHintWallet" style="display:none; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; font-family:var(--font-mono); font-weight:700; font-size:12px; padding:3px 10px; border-radius:20px;">
             <span>🪙</span> <span id="headerHintPoints">10 Hint Pts</span>
           </div>
           <div class="status-pill">
@@ -7723,6 +7724,26 @@
           style="width:9px; height:9px; border-radius:50%; background:#38bdf8; box-shadow:0 0 10px #38bdf8; animation:camPulse 1.5s infinite ease-in-out;"></span>
         <span>Live Proctor Link Active — Waiting for Administrator Authorization...</span>
       </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: SESSION TERMINATED BY ADMIN ============ -->
+  <div class="modal-overlay unclosable-lockout" id="modalSessionTerminated"
+    style="display:none; z-index:9999999; backdrop-filter:blur(16px); background:rgba(3,8,18,0.96);">
+    <div class="modal-box"
+      style="border:2px solid #ef4444; box-shadow:0 0 50px rgba(239,68,68,0.45); max-width:500px; text-align:center; padding:32px 26px;">
+      <div
+        style="width:68px; height:68px; border-radius:50%; background:rgba(239,68,68,0.15); border:2px solid #ef4444; display:inline-flex; align-items:center; justify-content:center; font-size:32px; margin-bottom:18px; box-shadow:0 0 25px rgba(239,68,68,0.35);">
+        ⚠️</div>
+      <h2
+        style="font-family:var(--font-display); font-size:20px; font-weight:800; color:#fff; margin:0 0 10px; letter-spacing:0.04em;">
+        SESSION TERMINATED BY ADMIN</h2>
+      <p style="color:#cbd5e1; font-size:14px; line-height:1.6; margin-bottom:24px;">
+        ⚠️ SESSION TERMINATED BY ADMIN - Your current attempt has been reset.
+      </p>
+      <button class="btn rose solid" style="width:100%; font-weight:700; padding:12px; font-size:14px; cursor:pointer;" onclick="returnToLoginAfterTermination()">
+        <span>Return to Login</span>
+      </button>
     </div>
   </div>
 
@@ -9498,6 +9519,85 @@
     }
     initCandidateUnlockListener();
 
+    /* ============================================================
+       CANDIDATE SESSION TERMINATION & RE-REGISTRATION RESET ENGINE
+       ============================================================ */
+    function terminateCandidateSession(reason) {
+      if (typeof currentScreenIs === 'function' && currentScreenIs('screen-admin')) return;
+      if (!S || sessionCleared) return;
+
+      console.warn('[SESSION_TERMINATED]: Active exam session terminated by admin. Reason:', reason);
+
+      // 1. Stop all active test timers
+      if (typeof stopMasterTimer === 'function') stopMasterTimer();
+      if (typeof readIv !== 'undefined' && readIv) { clearInterval(readIv); readIv = null; }
+      if (typeof initMiniGame !== 'undefined' && initMiniGame._timers) {
+        initMiniGame._timers.forEach(t => clearTimeout(t));
+        initMiniGame._timers = [];
+      }
+
+      // 2. Dismiss other candidate modals/overlays
+      if (typeof setModalVisibility === 'function') {
+        setModalVisibility('modalCandidateLockout', false);
+        setModalVisibility('modalTabWarn', false);
+        setModalVisibility('modalConfirm', false);
+        setModalVisibility('modalClueConfirm', false);
+        setModalVisibility('tgGameOverOverlay', false);
+      }
+      const lockEl = $('modalCandidateLockout');
+      if (lockEl) lockEl.style.display = 'none';
+
+      // 3. Clear candidate storage and state
+      clearSession();
+      gameActive = false;
+
+      // 4. Play alert sound
+      if (typeof SFX !== 'undefined' && SFX.warn) SFX.warn();
+
+      // 5. Show session terminated overlay
+      const termModal = $('modalSessionTerminated');
+      if (termModal) {
+        termModal.style.display = 'flex';
+        termModal.classList.add('active', 'show');
+      }
+    }
+    window.terminateCandidateSession = terminateCandidateSession;
+
+    function returnToLoginAfterTermination() {
+      const termModal = $('modalSessionTerminated');
+      if (termModal) {
+        termModal.style.display = 'none';
+        termModal.classList.remove('active', 'show');
+      }
+      S = null;
+      sessionCleared = false;
+      gameActive = false;
+
+      // Reset UI indicators
+      if ($('playerTag')) $('playerTag').textContent = '';
+      if ($('rankBadge')) $('rankBadge').classList.remove('show');
+      if ($('headerHintWallet')) $('headerHintWallet').style.display = 'none';
+      if ($('regError')) $('regError').style.display = 'none';
+
+      // Cleanly navigate to Landing / Registration screen
+      if (typeof go === 'function') go('screen-landing');
+    }
+    window.returnToLoginAfterTermination = returnToLoginAfterTermination;
+
+    // Active Candidate Session Sentinel: Periodically verifies active registration against Server/Google Sheet
+    setInterval(async () => {
+      if (typeof S === 'undefined' || !S || !S.sid || S.status === 'COMPLETED') return;
+      if (typeof currentScreenIs === 'function' && (currentScreenIs('screen-admin') || currentScreenIs('screen-landing'))) return;
+      if (Date.now() - (S.startedAt || 0) < 6000) return;
+
+      try {
+        const rows = await fetchServerStudentsData();
+        if (rows && Array.isArray(rows)) {
+          applyServerDataToRoster(rows);
+        }
+      } catch (e) { }
+    }, 3500);
+
     function forceSubmitCurrentRound() {
       if (!S) return;
       if (S.round === 'R1') finalizeRound(1);
@@ -9650,7 +9750,7 @@
       // UNIFY ADMIN DATA SOURCE: Hydrate all server students from Google Sheet (Code.gs)
       fetchServerStudentsData().then(rows => {
         if (rows && rows.length > 0) applyServerDataToRoster(rows);
-      }).catch(() => { });
+      }).catch(() => {});
 
       // Hydrate all database candidates & subscribe to proctor surveillance room
       if (typeof CyberArenaPipeline !== 'undefined') {
@@ -10019,6 +10119,11 @@
         window.operativesRoster = {};
         if (typeof renderAdminProctorConsole === 'function') renderAdminProctorConsole();
         if (typeof updateGlobalMemberCount === 'function') updateGlobalMemberCount();
+        if (typeof S !== 'undefined' && S && S.sid && S.status !== 'COMPLETED' && typeof currentScreenIs === 'function' && !currentScreenIs('screen-admin') && !currentScreenIs('screen-landing')) {
+          if ((Date.now() - (S.startedAt || 0)) > 6000) {
+            if (typeof terminateCandidateSession === 'function') terminateCandidateSession('DELETED_ALL');
+          }
+        }
         return;
       }
 
@@ -10065,6 +10170,16 @@
 
       saveLiveRoster(newRoster);
       window.operativesRoster = newRoster;
+
+      // Active candidate deletion check against server rows
+      if (typeof S !== 'undefined' && S && S.sid && S.status !== 'COMPLETED' && typeof currentScreenIs === 'function' && !currentScreenIs('screen-admin') && !currentScreenIs('screen-landing')) {
+        if ((Date.now() - (S.startedAt || 0)) > 6000) {
+          const found = rows.some(r => r && (r.sid === S.sid || r.candidateId === S.sid || r.id === S.sid || (S.player && r.name && r.name.toLowerCase() === S.player.name.toLowerCase())));
+          if (!found) {
+            if (typeof terminateCandidateSession === 'function') terminateCandidateSession('DELETED_FROM_SHEET');
+          }
+        }
+      }
 
       if (typeof renderAdminProctorConsole === 'function') renderAdminProctorConsole();
       if (typeof updateGlobalMemberCount === 'function') updateGlobalMemberCount();
@@ -10415,7 +10530,7 @@
         title: 'Cyber Arcade', eyebrow: 'ROUND 2 / 3', rules: [
           R2.length + ' puzzles: cryptography, scam detection, and emoji-decoding challenges.',
           'Each puzzle takes a short text answer — spelling matters, but answers are not case-sensitive.',
-          'The round timer runs for 30 minutes.',
+          'The round timer runs for 45 minutes.',
           "If you submit early, you'll wait in the Cyber Waiting Room until Round 3 begins.",
           AUTOSAVE_RULE]
       },
@@ -11917,11 +12032,11 @@
       if (typeof location === 'undefined') return true;
       const host = (location.hostname || '').toLowerCase();
       return host.includes('vercel.app') ||
-        host.includes('github.io') ||
-        host.includes('netlify.app') ||
-        host.includes('pages.dev') ||
-        location.protocol === 'file:' ||
-        (host !== 'localhost' && host !== '127.0.0.1' && !location.port);
+             host.includes('github.io') ||
+             host.includes('netlify.app') ||
+             host.includes('pages.dev') ||
+             location.protocol === 'file:' ||
+             (host !== 'localhost' && host !== '127.0.0.1' && !location.port);
     })();
 
     async function verifyDatabaseSync() {
@@ -11980,7 +12095,7 @@
           const uiStatus = String(uiOp.status || '').toUpperCase();
           if (dbStatus && uiStatus && dbStatus !== uiStatus) {
             if (!((dbStatus === 'ONLINE' || dbStatus === 'IN_PROGRESS' || dbStatus === 'STATUS_PENDING') &&
-              (uiStatus === 'ONLINE' || uiStatus === 'IN_PROGRESS' || uiStatus === 'STATUS_PENDING'))) {
+                  (uiStatus === 'ONLINE' || uiStatus === 'IN_PROGRESS' || uiStatus === 'STATUS_PENDING'))) {
               const msg = `SYNC ERROR: DB has status "${dbStatus}" for User ID ${sid}, but UI shows "${uiStatus}"`;
               console.error(msg);
               mismatches.push({ sid, field: 'status', db: dbStatus, ui: uiStatus, message: msg });
@@ -12304,6 +12419,16 @@
               if (roster[deletedId]) {
                 delete roster[deletedId];
                 saveLiveRoster(roster);
+              }
+            }
+            if (window.operativesRoster && window.operativesRoster[deletedId]) {
+              delete window.operativesRoster[deletedId];
+            }
+
+            // Check if active candidate is being deleted
+            if (typeof S !== 'undefined' && S && (deletedId === S.sid || deletedId === S.candidateId || (S.player && data.name && S.player.name === data.name))) {
+              if (typeof terminateCandidateSession === 'function') {
+                terminateCandidateSession('SOCKET_CANDIDATE_DELETED');
               }
             }
 
@@ -13510,6 +13635,20 @@
             delete window.operativesRoster[sid];
           }
 
+          // If current local session matches deleted candidate, immediately terminate
+          if (typeof S !== 'undefined' && S && (S.sid === sid || (S.player && S.player.name === candidateName))) {
+            if (typeof terminateCandidateSession === 'function') {
+              terminateCandidateSession('ADMIN_DELETE');
+            }
+          }
+
+          // Emit BroadcastChannel event across all tabs/windows
+          if (arenaBroadcastBus) {
+            try {
+              arenaBroadcastBus.postMessage({ type: 'CANDIDATE_DELETED', sid: sid, userId: sid, candidateId: sid });
+            } catch (e) { }
+          }
+
           // Clean up hint requests for this candidate
           if (typeof getHintRequests === 'function' && typeof saveHintRequests === 'function') {
             const hints = getHintRequests();
@@ -13529,14 +13668,14 @@
             await fetch(`${serverBase}/api/participants/${encodeURIComponent(sid)}`, {
               method: 'DELETE',
               headers: { 'Content-Type': 'application/json' }
-            }).catch(() => { });
+            }).catch(() => {});
           }
 
           // 5. Also sync to Google DB if available
           if (typeof GOOGLE_DATABASE_URL !== 'undefined' && GOOGLE_DATABASE_URL && !GOOGLE_DATABASE_URL.startsWith('PASTE_')) {
             try {
-              fetch(`${GOOGLE_DATABASE_URL}?action=delete&sid=${encodeURIComponent(sid)}`, { mode: 'no-cors' }).catch(() => { });
-            } catch (e) { }
+              fetch(`${GOOGLE_DATABASE_URL}?action=delete&sid=${encodeURIComponent(sid)}`, { mode: 'no-cors' }).catch(() => {});
+            } catch(e) {}
           }
 
           // 6. Refresh UI components immediately without page reload
@@ -13802,9 +13941,9 @@
 
       const tierDesc = isTier2
         ? '• <b>Level 2: Direct Walkthrough</b> instantly reveals explicit, step-by-step guidance directly in your panel.<br>' +
-        '• Deducts 10 points immediately from your Hint Wallet (Zero waiting for admin approval).'
+          '• Deducts 10 points immediately from your Hint Wallet (Zero waiting for admin approval).'
         : '• <b>Level 1: Conceptual Nudge</b> points you in the right direction without revealing the complete solution.<br>' +
-        '• Deducts 10 points immediately from your Hint Wallet (Zero waiting for admin approval).';
+          '• Deducts 10 points immediately from your Hint Wallet (Zero waiting for admin approval).';
 
       pendingClueRequest = { roundName, qId, qLabel, tier: requestedTier };
 
@@ -13932,7 +14071,7 @@
         if (typeof CyberArenaPipeline !== 'undefined' && CyberArenaPipeline.requestClue) {
           CyberArenaPipeline.requestClue(record);
         }
-      } catch (err) { }
+      } catch (err) {}
 
       broadcastParticipantHeartbeat();
       SFX.success();
@@ -14143,7 +14282,7 @@
       showToast('Revoked clue access for ' + r.name + '.');
       renderAdminHintConsole();
     }
-
+    
     function adminEditGrantedHint(idx) {
       const list = getHintRequests();
       const r = list[idx];
@@ -15141,6 +15280,13 @@
         if (originalBusHandler) originalBusHandler(e);
         if (e && e.data && (e.data.type === 'ROUND_FORCE_ADVANCED' || e.data.type === 'ARENA_ROUND_ADVANCED' || e.data.type === 'ROUND_ADVANCED')) {
           handleForceAdvanceRound(e.data);
+        } else if (e && e.data && (e.data.type === 'CANDIDATE_DELETED' || e.data.type === 'PARTICIPANT_DELETED')) {
+          const deletedSid = e.data.sid || e.data.userId || e.data.candidateId;
+          if (typeof S !== 'undefined' && S && (S.sid === deletedSid || S.candidateId === deletedSid)) {
+            if (typeof terminateCandidateSession === 'function') {
+              terminateCandidateSession('BROADCAST_CANDIDATE_DELETED');
+            }
+          }
         }
       };
     }
