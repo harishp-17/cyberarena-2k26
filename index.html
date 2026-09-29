@@ -5861,6 +5861,17 @@
       gap: 8px !important;
     }
 
+    .admin-student-actions.four-col {
+      display: grid !important;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+      gap: 5px !important;
+    }
+
+    .admin-student-actions.four-col .threat-btn-sm {
+      padding: 0 2px !important;
+      font-size: 10px !important;
+    }
+
     .threat-btn-pardon-active {
       border: 1px solid rgba(16, 185, 129, 0.5) !important;
       color: #34d399 !important;
@@ -6787,7 +6798,8 @@
                 <use href="#i-volume-high" />
               </svg></i>
           </button>
-          <div class="status-pill hint-wallet-pill" id="headerHintWallet" style="display:none; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; font-family:var(--font-mono); font-weight:700; font-size:12px; padding:3px 10px; border-radius:20px;">
+          <div class="status-pill hint-wallet-pill" id="headerHintWallet"
+            style="display:none; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; font-family:var(--font-mono); font-weight:700; font-size:12px; padding:3px 10px; border-radius:20px;">
             <span>🪙</span> <span id="headerHintPoints">10 Hint Pts</span>
           </div>
           <div class="status-pill">
@@ -7677,11 +7689,14 @@
 
 
   <!-- ============ MODAL: TAB SWITCH WARNING ============ -->
-  <div class="modal-overlay" id="modalTabWarn" style="display:none; z-index:9999;">
-    <div class="modal-box">
-      <h3>⚠ FOCUS VIOLATION DETECTED</h3>
-      <p id="tabWarnText">You switched away from the challenge window. This has been logged.</p>
-      <button class="btn rose" style="width:100%;" onclick="closeTabWarn()">RETURN TO CHALLENGE</button>
+  <div class="modal-overlay" id="modalTabWarn" style="display:none; z-index:99999;">
+    <div class="modal-box danger" style="text-align:center; max-width:480px; padding:28px 24px; border:2px solid #fb7185; box-shadow:0 0 40px rgba(251,113,133,0.35);">
+      <div style="font-size:36px; margin-bottom:12px;">⚠️</div>
+      <h3 style="color:#fb7185; font-size:18px; font-weight:800; margin-bottom:8px; font-family:var(--font-display);">STRIKE WARNING DETECTED</h3>
+      <p id="tabWarnText" style="color:#e2e8f0; font-size:13.5px; line-height:1.6; margin-bottom:20px;">
+        You switched away from the challenge window. This violation has been recorded by the proctor.
+      </p>
+      <button class="btn rose" style="width:100%; font-weight:700; padding:12px; cursor:pointer;" onclick="closeTabWarn()">RETURN TO CHALLENGE</button>
     </div>
   </div>
 
@@ -7695,10 +7710,9 @@
         🔒</div>
       <h2
         style="font-family:var(--font-display); font-size:20px; font-weight:800; color:#fff; margin:0 0 10px; letter-spacing:0.04em;">
-        Test Locked Due to Proctoring Violation</h2>
+        EXAM LOCKED — CONTACT PROCTOR FOR UNLOCK</h2>
       <p style="color:#cbd5e1; font-size:13.5px; line-height:1.6; margin-bottom:20px;">
-        A tab switch or unauthorized window change was detected. Your session has been locked. Please wait for the
-        proctor to review and grant re-entry access.
+        Maximum proctoring violations reached (3/3 strikes). Your session has been locked. Please wait for the proctor to review and grant re-entry access.
       </p>
 
       <div
@@ -7806,7 +7820,7 @@
     <div class="modal-box"
       style="border:2px solid #f59e0b; box-shadow:0 0 50px rgba(245,158,11,0.35); max-width:460px; text-align:center;">
       <div style="font-size:32px; margin-bottom:8px;">🚨</div>
-      <h3 style="color:#f59e0b; margin-bottom:10px; font-size:17px;">SYSTEM ADMIN DIRECT DISPATCH</h3>
+      <h3 style="color:#f59e0b; margin-bottom:10px; font-size:17px; font-family:var(--font-display); letter-spacing:0.04em;">⚠️ DIRECT WARNING FROM PROCTOR</h3>
       <p id="adminDirectAlertText"
         style="color:#f1f5f9; font-size:13px; line-height:1.6; margin-bottom:20px; white-space:pre-wrap;"></p>
       <button class="btn solid"
@@ -9146,14 +9160,42 @@
     /* ============================================================
        ANTI-CHEATING
        ============================================================ */
-    document.addEventListener('contextmenu', e => e.preventDefault());
-    document.addEventListener('copy', e => e.preventDefault());
-    document.addEventListener('cut', e => e.preventDefault());
-    document.addEventListener('paste', e => e.preventDefault());
+    document.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      if (typeof isCandidateTestTerminalActive === 'function' && isCandidateTestTerminalActive()) {
+        registerTabViolation('Right-click context menu attempt');
+      }
+    });
+    document.addEventListener('copy', e => {
+      e.preventDefault();
+      if (typeof isCandidateTestTerminalActive === 'function' && isCandidateTestTerminalActive()) {
+        registerTabViolation('Clipboard copy attempt');
+      }
+    });
+    document.addEventListener('cut', e => {
+      e.preventDefault();
+      if (typeof isCandidateTestTerminalActive === 'function' && isCandidateTestTerminalActive()) {
+        registerTabViolation('Clipboard cut attempt');
+      }
+    });
+    document.addEventListener('paste', e => {
+      e.preventDefault();
+      if (typeof isCandidateTestTerminalActive === 'function' && isCandidateTestTerminalActive()) {
+        registerTabViolation('Clipboard paste attempt');
+      }
+    });
     document.addEventListener('selectstart', e => {
       const tag = (e.target && e.target.tagName) || '';
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       e.preventDefault();
+    });
+    document.addEventListener('keydown', e => {
+      if (typeof isCandidateTestTerminalActive === 'function' && isCandidateTestTerminalActive()) {
+        if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) || (e.ctrlKey && (e.key === 'U' || e.key === 'u'))) {
+          e.preventDefault();
+          registerTabViolation('Developer tools / source inspection shortcut');
+        }
+      }
     });
 
     /* ============================================================
@@ -9321,8 +9363,8 @@
       // 1. Proctors and Admin command view are strictly exempt
       if (typeof currentScreenIs === 'function' && currentScreenIs('screen-admin')) return false;
       if (typeof window !== 'undefined' && window.location) {
-        if (window.location.search && window.location.search.includes('admin=true')) return false;
-        if (window.location.pathname && window.location.pathname.includes('/admin')) return false;
+        if (window.location.search && (window.location.search.includes('admin=true') || window.location.search.includes('role=admin'))) return false;
+        if (window.location.pathname && (window.location.pathname.includes('/admin') || window.location.pathname.includes('admin.html'))) return false;
       }
       if (typeof adminSimActive !== 'undefined' && adminSimActive && typeof currentScreenIs === 'function' && currentScreenIs('screen-admin')) return false;
 
@@ -9332,7 +9374,6 @@
       if (S.status === 'COMPLETED' || S.is_locked) return false;
 
       // 3. Must be actively testing inside a round test terminal screen
-      if (!gameActive) return false;
       const isTestingScreen = (typeof currentScreenIs === 'function') && (
         currentScreenIs('screen-round1') ||
         currentScreenIs('screen-round2') ||
@@ -9341,24 +9382,24 @@
       if (!isTestingScreen) return false;
 
       // 4. In-app confirmation dialogs or prompt modals suppress false violations
-      if (isInternalModalOpen || (typeof isAnyModalActive === 'function' && isAnyModalActive())) return false;
+      if (isInternalModalOpen) return false;
 
       return true;
     }
 
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && isCandidateTestTerminalActive()) {
-        registerTabViolation();
+        registerTabViolation('Tab switch detected');
       }
     });
     window.addEventListener('blur', () => {
       if (isCandidateTestTerminalActive()) {
-        registerTabViolation();
+        registerTabViolation('Window lost focus');
       }
     });
 
     let lastViolationTs = 0;
-    function registerTabViolation() {
+    function registerTabViolation(reason) {
       if (!isCandidateTestTerminalActive()) return;
       const now = Date.now();
       if (now - lastViolationTs < 1500) return;
@@ -9372,12 +9413,14 @@
       save();
       SFX.warn();
 
+      const violationDesc = reason || 'Tab switch or unauthorized window change';
+
       if (S.strikes_count >= MAX_TAB_WARNINGS) {
-        triggerCandidateLockout('Tab switch or unauthorized window change (' + S.strikes_count + '/' + MAX_TAB_WARNINGS + ' strikes)');
+        triggerCandidateLockout(violationDesc + ' (' + S.strikes_count + '/' + MAX_TAB_WARNINGS + ' strikes)');
       } else {
-        const box = $('modalTabWarn'), txt = $('tabWarnText');
-        if (txt) txt.textContent = 'You switched away from the challenge window (Strike ' + S.strikes_count + '/' + MAX_TAB_WARNINGS + '). At ' + MAX_TAB_WARNINGS + ' strikes your session is locked until proctor review.';
-        if (box) box.classList.add('active');
+        const txt = $('tabWarnText');
+        if (txt) txt.textContent = `You switched away from the challenge window or triggered a violation (${violationDesc}). Active strikes: ${S.strikes_count}/${MAX_TAB_WARNINGS}. At ${MAX_TAB_WARNINGS} strikes your exam session will be locked until proctor review.`;
+        setModalVisibility('modalTabWarn', true);
       }
 
       // Real-time Strike & Focus Violation reporting to SOC dashboard
@@ -9394,12 +9437,12 @@
           is_locked: !!S.is_locked,
           lock_reason: S.lock_reason || '',
           lastViolationTime: now,
-          desc: '⚠️ TAB SWITCH: ' + S.player.name + ' switched away from test window (Strike ' + S.violations + '/3)'
+          desc: '⚠️ STRIKE WARNING: ' + S.player.name + ' - ' + violationDesc + ' (Strike ' + S.violations + '/' + MAX_TAB_WARNINGS + ')'
         });
       }
       broadcastParticipantHeartbeat();
     }
-    function closeTabWarn() { $('modalTabWarn').classList.remove('active'); }
+    function closeTabWarn() { setModalVisibility('modalTabWarn', false); }
 
     /* ============================================================
        PROCTOR LOCKOUT, TIMER FREEZE & REPEATABLE CYCLE LOGIC
@@ -9424,34 +9467,31 @@
 
     function triggerCandidateLockout(reason) {
       if (typeof currentScreenIs === 'function' && currentScreenIs('screen-admin')) return;
-      if (typeof window !== 'undefined' && window.location && window.location.search && window.location.search.includes('admin=true')) return;
+      if (typeof window !== 'undefined' && window.location && window.location.search && (window.location.search.includes('admin=true') || window.location.search.includes('role=admin'))) return;
       if (!S || S.role === 'ADMIN' || S.role === 'PROCTOR') return;
-      if (!isCandidateTestTerminalActive() && !S.is_locked) return;
       S.is_locked = true;
-      S.lock_reason = reason || 'Tab switch or unauthorized window change';
+      S.lock_reason = reason || 'Tab switch or unauthorized window change (3/3 strikes)';
       S.lastLockoutTime = Date.now();
       freezeMasterTimer();
       save();
 
       // Close minor warning box if open
-      const warnBox = $('modalTabWarn');
-      if (warnBox) warnBox.classList.remove('active');
+      setModalVisibility('modalTabWarn', false);
 
       // Activate unclosable full-screen lockout overlay
-      const lockModal = $('modalCandidateLockout');
       const strikeInfo = $('lockoutStrikeInfo');
       const reasonText = $('lockoutReasonText');
 
       if (strikeInfo) strikeInfo.textContent = 'Active Strikes: ' + (S.strikes_count || MAX_TAB_WARNINGS) + ' / ' + MAX_TAB_WARNINGS + ' (Lockout Enforced)';
       if (reasonText) reasonText.textContent = S.lock_reason;
-      if (lockModal) lockModal.classList.add('active');
+      setModalVisibility('modalCandidateLockout', true);
 
       SFX.warn();
       broadcastParticipantHeartbeat();
     }
 
     function dismissCandidateLockout(pardonEvent) {
-      if (!S || !S.is_locked) return;
+      if (!S) return;
       S.is_locked = false;
       const prevStrikes = S.strikes_count || S.violations || MAX_TAB_WARNINGS;
       S.strikes_count = 0;
@@ -9470,8 +9510,8 @@
       save();
       resumeMasterTimer();
 
-      const lockModal = $('modalCandidateLockout');
-      if (lockModal) lockModal.classList.remove('active');
+      setModalVisibility('modalCandidateLockout', false);
+      setModalVisibility('modalTabWarn', false);
 
       SFX.success();
       showToast('🔓 Terminal Access Restored! Active strikes reset to 0/3. You may resume testing.');
@@ -9481,10 +9521,10 @@
     function initCandidateUnlockListener() {
       // 1. Storage event across tabs/windows
       window.addEventListener('storage', e => {
-        if (e.key === 'cyberarena_unlock_events_v1' && e.newValue) {
+        if ((e.key === 'cyberarena_unlock_events_v1' || e.key === 'cyberarena_unlock_dispatch_v1') && e.newValue) {
           try {
             const payload = JSON.parse(e.newValue);
-            if (S && S.is_locked && (payload.sid === S.sid || payload.sid === 'all')) {
+            if (S && S.is_locked && (payload.sid === S.sid || payload.candidateId === S.sid || payload.sid === 'all')) {
               dismissCandidateLockout(payload);
             }
           } catch (err) { console.error("[SURVEILLANCE_PIPE_ERROR]:", err); }
@@ -9495,10 +9535,10 @@
       setInterval(() => {
         if (!S || !S.is_locked) return;
         try {
-          const raw = localStorage.getItem('cyberarena_unlock_events_v1');
+          const raw = localStorage.getItem('cyberarena_unlock_events_v1') || localStorage.getItem('cyberarena_unlock_dispatch_v1');
           if (raw) {
             const payload = JSON.parse(raw);
-            if (payload && (payload.sid === S.sid || payload.sid === 'all') && payload.pardoned_at > (S.lastLockoutTime || 0)) {
+            if (payload && (payload.sid === S.sid || payload.candidateId === S.sid || payload.sid === 'all') && payload.pardoned_at > (S.lastLockoutTime || 0)) {
               dismissCandidateLockout(payload);
               return;
             }
@@ -9750,7 +9790,7 @@
       // UNIFY ADMIN DATA SOURCE: Hydrate all server students from Google Sheet (Code.gs)
       fetchServerStudentsData().then(rows => {
         if (rows && rows.length > 0) applyServerDataToRoster(rows);
-      }).catch(() => {});
+      }).catch(() => { });
 
       // Hydrate all database candidates & subscribe to proctor surveillance room
       if (typeof CyberArenaPipeline !== 'undefined') {
@@ -10177,6 +10217,24 @@
           const found = rows.some(r => r && (r.sid === S.sid || r.candidateId === S.sid || r.id === S.sid || (S.player && r.name && r.name.toLowerCase() === S.player.name.toLowerCase())));
           if (!found) {
             if (typeof terminateCandidateSession === 'function') terminateCandidateSession('DELETED_FROM_SHEET');
+          }
+        }
+      }
+
+      // Check for remote unlock / strike pardon from Google Sheet or Proctor Dashboard
+      if (typeof S !== 'undefined' && S && S.sid && S.is_locked) {
+        const myRow = rows.find(r => r && (r.sid === S.sid || r.candidateId === S.sid || r.id === S.sid || (S.player && r.name && r.name.toLowerCase() === S.player.name.toLowerCase())));
+        if (myRow) {
+          const strikes = myRow.strikes != null ? Number(myRow.strikes) : (myRow.violations != null ? Number(myRow.violations) : 0);
+          const isRowLocked = (myRow.is_locked === true || myRow.isLocked === true || myRow.status === 'LOCKED' || strikes >= 3);
+          if (!isRowLocked) {
+            if (typeof dismissCandidateLockout === 'function') {
+              dismissCandidateLockout({
+                pardoned_at: Date.now(),
+                pardoned_by: 'Remote Proctor / Google Sheet',
+                prior_strikes: strikes
+              });
+            }
           }
         }
       }
@@ -12032,11 +12090,11 @@
       if (typeof location === 'undefined') return true;
       const host = (location.hostname || '').toLowerCase();
       return host.includes('vercel.app') ||
-             host.includes('github.io') ||
-             host.includes('netlify.app') ||
-             host.includes('pages.dev') ||
-             location.protocol === 'file:' ||
-             (host !== 'localhost' && host !== '127.0.0.1' && !location.port);
+        host.includes('github.io') ||
+        host.includes('netlify.app') ||
+        host.includes('pages.dev') ||
+        location.protocol === 'file:' ||
+        (host !== 'localhost' && host !== '127.0.0.1' && !location.port);
     })();
 
     async function verifyDatabaseSync() {
@@ -12095,7 +12153,7 @@
           const uiStatus = String(uiOp.status || '').toUpperCase();
           if (dbStatus && uiStatus && dbStatus !== uiStatus) {
             if (!((dbStatus === 'ONLINE' || dbStatus === 'IN_PROGRESS' || dbStatus === 'STATUS_PENDING') &&
-                  (uiStatus === 'ONLINE' || uiStatus === 'IN_PROGRESS' || uiStatus === 'STATUS_PENDING'))) {
+              (uiStatus === 'ONLINE' || uiStatus === 'IN_PROGRESS' || uiStatus === 'STATUS_PENDING'))) {
               const msg = `SYNC ERROR: DB has status "${dbStatus}" for User ID ${sid}, but UI shows "${uiStatus}"`;
               console.error(msg);
               mismatches.push({ sid, field: 'status', db: dbStatus, ui: uiStatus, message: msg });
@@ -12404,6 +12462,13 @@
             }
           }
           if (typeof renderAdminProctorConsole === 'function') renderAdminProctorConsole();
+        } else if (type === 'ADMIN_DIRECT_ALERT' || type === 'DIRECT_WARNING' || type === 'CANDIDATE_ALERT') {
+          const targetId = (data && (data.targetSid || data.sid || data.candidateId || data.userId)) || '';
+          if (typeof S !== 'undefined' && S && (targetId === S.sid || targetId === S.candidateId)) {
+            if (typeof showAdminDirectAlert === 'function') {
+              showAdminDirectAlert(data.text || data.message || data.alert_message || 'You are switching tabs! Focus on your test.');
+            }
+          }
         } else if (type === 'CANDIDATE_DELETED' || type === 'PARTICIPANT_DELETED') {
           const deletedId = data.userId || data.candidateId || data.sid || data.id;
           if (deletedId) {
@@ -12535,6 +12600,7 @@
         reportProgress: function (payload) { send('QUESTION_PROGRESS', payload); postRest('/api/sessions/heartbeat', payload); },
         requestClue: function (payload) { send('CLUE_REQUESTED', payload); postRest('/api/clues/request', payload); },
         dispatchClue: function (payload) { send('ADMIN_CLUE_DISPATCHED', payload); postRest('/api/clues/dispatch', payload); },
+        sendDirectAlert: function (payload) { send('ADMIN_DIRECT_ALERT', payload); postRest('/api/alerts/send', payload); },
         advanceRound: function (fromRound, toRound, proctorName, forceSubmitActive) {
           const payload = {
             fromRound,
@@ -13127,22 +13193,24 @@
                 '<button data-sid="' + s.sid + '" class="threat-btn-sm" style="color:#34d399; border-color:rgba(52,211,153,0.3); background:rgba(16,185,129,0.08);" onclick="openStudentInspectModal(this.dataset.sid)" title="Review finished candidate transcript">👁️ Screen</button>' +
                 '<button data-sid="' + s.sid + '" class="threat-btn-sm" style="color:#fb7185; border-color:rgba(251,69,112,0.35); background:rgba(225,29,72,0.08);" onclick="adminDeleteCandidate(this.dataset.sid)" title="Delete candidate from database">🗑️ Delete</button>';
             } else if (isLocked) {
-              actionGridCls = 'admin-student-actions three-col';
+              actionGridCls = 'admin-student-actions four-col';
               actionsHtml =
                 '<button data-sid="' + s.sid + '" class="threat-btn-sm" style="color:#38bdf8; border-color:rgba(56,189,248,0.4);" onclick="openStudentInspectModal(this.dataset.sid)" title="Audit candidate session and verify reason">👁️ Screen</button>' +
+                '<button data-sid="' + s.sid + '" data-name="' + escapeHtml(s.name) + '" class="threat-btn-sm" style="color:#fb7185; border-color:rgba(251,69,112,0.35);" onclick="sendIndividualCandidateAlert(this.dataset.sid)" title="Dispatch custom warning alert to candidate screen">⚠️ Alert</button>' +
                 '<button data-sid="' + s.sid + '" class="threat-btn-sm threat-btn-pardon-active" onclick="adminPardonStrike(this.dataset.sid)" title="Pardon candidate, unlock terminal, and reset active strikes to 0/3">🔓 Unlock</button>' +
                 '<button data-sid="' + s.sid + '" class="threat-btn-sm" style="color:#fb7185; border-color:rgba(251,69,112,0.35); background:rgba(225,29,72,0.08);" onclick="adminDeleteCandidate(this.dataset.sid)" title="Delete candidate from database">🗑️ Delete</button>';
             } else if (strikesVal > 0) {
-              actionGridCls = 'admin-student-actions three-col';
+              actionGridCls = 'admin-student-actions four-col';
               actionsHtml =
                 '<button data-sid="' + s.sid + '" class="threat-btn-sm" style="color:#38bdf8; border-color:rgba(56,189,248,0.4);" onclick="openStudentInspectModal(this.dataset.sid)" title="Watch candidate virtual terminal in real-time">👁️ Screen</button>' +
+                '<button data-sid="' + s.sid + '" data-name="' + escapeHtml(s.name) + '" class="threat-btn-sm" style="color:#fb7185; border-color:rgba(251,69,112,0.35);" onclick="sendIndividualCandidateAlert(this.dataset.sid)" title="Dispatch custom warning alert to candidate screen">⚠️ Alert</button>' +
                 '<button data-sid="' + s.sid + '" class="threat-btn-sm threat-btn-pardon-active" onclick="adminPardonStrike(this.dataset.sid)" title="Pardon 1 strike (-1 violation)">🔄 Pardon</button>' +
                 '<button data-sid="' + s.sid + '" class="threat-btn-sm" style="color:#fb7185; border-color:rgba(251,69,112,0.35); background:rgba(225,29,72,0.08);" onclick="adminDeleteCandidate(this.dataset.sid)" title="Delete candidate from database">🗑️ Delete</button>';
             } else {
               actionGridCls = 'admin-student-actions three-col';
               actionsHtml =
                 '<button data-sid="' + s.sid + '" class="threat-btn-sm" style="color:#38bdf8; border-color:rgba(56,189,248,0.4);" onclick="openStudentInspectModal(this.dataset.sid)" title="Watch candidate virtual terminal in real-time">👁️ Screen</button>' +
-                '<button data-sid="' + s.sid + '" data-name="' + escapeHtml(s.name) + '" class="threat-btn-sm" style="color:#fb7185; border-color:rgba(251,69,112,0.35);" onclick="adminSendWarning(this.dataset.sid, this.dataset.name)" title="Dispatch custom warning alert to candidate screen">⚠️ Alert</button>' +
+                '<button data-sid="' + s.sid + '" data-name="' + escapeHtml(s.name) + '" class="threat-btn-sm" style="color:#fb7185; border-color:rgba(251,69,112,0.35);" onclick="sendIndividualCandidateAlert(this.dataset.sid)" title="Dispatch custom warning alert to candidate screen">⚠️ Alert</button>' +
                 '<button data-sid="' + s.sid + '" class="threat-btn-sm" style="color:#fb7185; border-color:rgba(251,69,112,0.35); background:rgba(225,29,72,0.08);" onclick="adminDeleteCandidate(this.dataset.sid)" title="Delete candidate from database">🗑️ Delete</button>';
             }
 
@@ -13227,18 +13295,19 @@
           } else if (isLocked) {
             tableActions =
               '<button data-sid="' + s.sid + '" class="threat-btn-sm" style="color:#38bdf8; width:auto; padding:3px 8px; height:28px;" onclick="openStudentInspectModal(this.dataset.sid)" title="Audit session transcript">👁️ Screen</button> ' +
+              '<button data-sid="' + s.sid + '" data-name="' + escapeHtml(s.name) + '" class="threat-btn-sm" style="color:#fb7185; width:auto; padding:3px 8px; height:28px; margin-left:4px;" onclick="sendIndividualCandidateAlert(this.dataset.sid)" title="Dispatch custom warning alert to candidate screen">⚠️ Alert</button> ' +
               '<button data-sid="' + s.sid + '" class="threat-btn-sm" style="color:#4ade80; width:auto; padding:3px 10px; height:28px; margin-left:4px;" onclick="adminPardonStrike(this.dataset.sid)" title="Unlock terminal and reset active strikes to 0/3">🔓 Unlock &amp; Reset</button> ' +
               '<button data-sid="' + s.sid + '" class="threat-btn-sm" style="color:#fb7185; width:auto; padding:3px 8px; height:28px; margin-left:4px;" onclick="adminDeleteCandidate(this.dataset.sid)" title="Delete participant from database">🗑️</button>';
           } else if (strikesVal > 0) {
             tableActions =
               '<button data-sid="' + s.sid + '" class="threat-btn-sm" style="color:#38bdf8; width:auto; padding:3px 8px; height:28px;" onclick="openStudentInspectModal(this.dataset.sid)">👁️ Screen</button> ' +
-              '<button data-sid="' + s.sid + '" data-name="' + escapeHtml(s.name) + '" class="threat-btn-sm" style="color:#fb7185; width:auto; padding:3px 8px; height:28px; margin-left:4px;" onclick="adminSendWarning(this.dataset.sid, this.dataset.name)">⚠️ Alert</button> ' +
+              '<button data-sid="' + s.sid + '" data-name="' + escapeHtml(s.name) + '" class="threat-btn-sm" style="color:#fb7185; width:auto; padding:3px 8px; height:28px; margin-left:4px;" onclick="sendIndividualCandidateAlert(this.dataset.sid)">⚠️ Alert</button> ' +
               '<button data-sid="' + s.sid + '" class="threat-btn-sm" style="color:#4ade80; width:auto; padding:3px 8px; height:28px; margin-left:4px;" onclick="adminPardonStrike(this.dataset.sid)">🔄 Pardon</button> ' +
               '<button data-sid="' + s.sid + '" class="threat-btn-sm" style="color:#fb7185; width:auto; padding:3px 8px; height:28px; margin-left:4px;" onclick="adminDeleteCandidate(this.dataset.sid)" title="Delete participant from database">🗑️</button>';
           } else {
             tableActions =
               '<button data-sid="' + s.sid + '" class="threat-btn-sm" style="color:#38bdf8; width:auto; padding:3px 8px; height:28px;" onclick="openStudentInspectModal(this.dataset.sid)">👁️ Screen</button> ' +
-              '<button data-sid="' + s.sid + '" data-name="' + escapeHtml(s.name) + '" class="threat-btn-sm" style="color:#fb7185; width:auto; padding:3px 8px; height:28px; margin-left:4px;" onclick="adminSendWarning(this.dataset.sid, this.dataset.name)">⚠️ Alert</button> ' +
+              '<button data-sid="' + s.sid + '" data-name="' + escapeHtml(s.name) + '" class="threat-btn-sm" style="color:#fb7185; width:auto; padding:3px 8px; height:28px; margin-left:4px;" onclick="sendIndividualCandidateAlert(this.dataset.sid)">⚠️ Alert</button> ' +
               '<button data-sid="' + s.sid + '" class="threat-btn-sm" style="color:#fb7185; width:auto; padding:3px 8px; height:28px; margin-left:4px;" onclick="adminDeleteCandidate(this.dataset.sid)" title="Delete participant from database">🗑️</button>';
           }
 
@@ -13406,11 +13475,11 @@
       } else if (isLocked) {
         modalIntervention =
           '<button data-sid="' + s.sid + '" class="btn solid small" style="background:#22c55e; border-color:#22c55e; font-weight:800;" onclick="adminPardonStrike(this.dataset.sid); openStudentInspectModal(this.dataset.sid);">🔓 Unlock Terminal & Reset Strikes (0/3)</button>' +
-          '<button class="btn disabled small" disabled style="opacity:0.4; cursor:not-allowed;" title="Session locked: warnings disabled">⚠️ Alert (Locked)</button>' +
+          '<button data-sid="' + s.sid + '" data-name="' + escapeHtml(s.name) + '" class="btn rose small" onclick="sendIndividualCandidateAlert(this.dataset.sid)">⚠️ Send Individual Alert</button>' +
           '<button class="btn disabled small" disabled style="opacity:0.4; cursor:not-allowed;" title="Cannot grant clues to a locked terminal">💡 Clue (Locked)</button>';
       } else {
         modalIntervention =
-          '<button data-sid="' + s.sid + '" data-name="' + escapeHtml(s.name) + '" class="btn solid small" style="background:#0284c7; border-color:#38bdf8;" onclick="adminSendWarning(this.dataset.sid, this.dataset.name)">⚠️ Dispatch Warning Alert</button>' +
+          '<button data-sid="' + s.sid + '" data-name="' + escapeHtml(s.name) + '" class="btn solid small" style="background:#0284c7; border-color:#38bdf8;" onclick="sendIndividualCandidateAlert(this.dataset.sid)">⚠️ Send Individual Alert</button>' +
           (s.violations > 0 ? '<button data-sid="' + s.sid + '" class="btn ghost small" onclick="adminPardonStrike(this.dataset.sid); openStudentInspectModal(this.dataset.sid);">🔄 Pardon 1 Strike</button>' : '') +
           '<button data-sid="' + s.sid + '" class="btn ghost small" style="color:#38bdf8;" onclick="adminQuickGrantClue(this.dataset.sid)">💡 Grant Clue</button>';
       }
@@ -13506,44 +13575,119 @@
       });
     }
 
-    function adminSendWarning(sid, name) {
+    function sendIndividualCandidateAlert(sid, customMessage) {
+      if (!sid) return;
       const roster = getLiveRoster();
-      const s = roster[sid];
-      if (s && (s.is_locked || (s.violations >= 3))) {
-        showToast('Cannot send warnings to a locked terminal.');
-        return;
-      }
-      showAppModal({
-        mode: 'prompt',
-        title: 'DISPATCH PROCTOR WARNING',
-        icon: '🚨',
-        message: 'Enter warning alert to display on ' + name + '\'s terminal screen:',
-        inputLabel: 'Warning Message:',
-        defaultValue: 'System Admin Warning: Focus violations detected! Stay on the challenge window.',
-        confirmText: '⚠️ Send Warning Alert',
-        cancelText: 'Cancel',
-        onConfirm: (msg) => {
-          if (!msg || msg.trim() === '') return;
-          const trimmed = msg.trim();
+      const s = (roster && roster[sid]) || (window.operativesRoster && window.operativesRoster[sid]) || {};
+      const candidateName = s.name || sid;
+
+      const dispatchAlert = (msgText) => {
+        if (!msgText || !msgText.trim()) return;
+        const trimmed = msgText.trim();
+        const alertId = 'alert_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        const alertPayload = {
+          type: 'ADMIN_DIRECT_ALERT',
+          event: 'DIRECT_WARNING',
+          targetSid: sid,
+          sid: sid,
+          candidateId: sid,
+          candidateName: candidateName,
+          text: trimmed,
+          message: trimmed,
+          alertId: alertId,
+          timestamp: Date.now(),
+          sender: 'System Admin Proctor (2825)'
+        };
+
+        // 1. Dual LocalStorage persistence for instant cross-tab receipt
+        try {
           const msgs = JSON.parse(localStorage.getItem(ADMIN_DIRECT_MSG_KEY) || '{}');
-          msgs[sid] = { text: trimmed, time: Date.now() };
+          msgs[sid] = { text: trimmed, message: trimmed, time: Date.now(), alertId: alertId };
           localStorage.setItem(ADMIN_DIRECT_MSG_KEY, JSON.stringify(msgs));
-          adminLogSecurityEvent('warn', 'ADMIN DISPATCH: Warning sent to ' + name + ' ("' + trimmed + '")');
-          showToast('⚠️ Warning dispatched directly to ' + name + '!');
-          SFX.warn();
+          localStorage.setItem('cyberarena_last_direct_alert', JSON.stringify(alertPayload));
+        } catch (e) { console.error("[ALERT_SYNC_ERROR]:", e); }
+
+        // 2. BroadcastChannel broadcast
+        if (arenaBroadcastBus) {
+          try {
+            arenaBroadcastBus.postMessage(alertPayload);
+          } catch (e) { }
         }
-      });
+
+        // 3. CyberArenaPipeline (WebSocket / SSE / REST)
+        try {
+          if (typeof CyberArenaPipeline !== 'undefined') {
+            if (typeof CyberArenaPipeline.sendDirectAlert === 'function') {
+              CyberArenaPipeline.sendDirectAlert(alertPayload);
+            } else if (typeof CyberArenaPipeline.broadcast === 'function') {
+              CyberArenaPipeline.broadcast(alertPayload);
+            }
+          }
+        } catch (err) { console.error('[SURVEILLANCE_PIPE_ERROR]: Alert pipe error:', err); }
+
+        // 4. Google Apps Script / Backend sync
+        if (typeof API_URL !== 'undefined' && API_URL && !API_URL.startsWith('PASTE_')) {
+          try {
+            fetch(API_URL, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({
+                action: 'candidate_alert',
+                key: (typeof API_KEY !== 'undefined' ? API_KEY : ''),
+                targetSid: sid,
+                sid: sid,
+                alert_message: trimmed,
+                timestamp: Date.now()
+              })
+            }).catch(() => {});
+          } catch(e) {}
+        }
+
+        // 5. If this browser tab is the active candidate, show immediately
+        if (typeof S !== 'undefined' && S && (S.sid === sid || S.candidateId === sid)) {
+          showAdminDirectAlert(trimmed);
+        }
+
+        adminLogSecurityEvent('warn', 'ADMIN DIRECT ALERT: Warning dispatched to ' + candidateName + ' (' + sid + '): "' + trimmed + '"');
+        showToast('⚠️ Individual alert dispatched to ' + candidateName + '!');
+        if (typeof SFX !== 'undefined' && SFX.warn) SFX.warn();
+      };
+
+      if (customMessage) {
+        dispatchAlert(customMessage);
+      } else {
+        showAppModal({
+          mode: 'prompt',
+          title: 'SEND INDIVIDUAL CANDIDATE ALERT',
+          icon: '🚨',
+          message: 'Enter targeted warning alert to display on ' + candidateName + '\'s terminal screen:',
+          inputLabel: 'Direct Warning Message:',
+          defaultValue: 'You are switching tabs! Focus on your test. Proctoring surveillance is active.',
+          confirmText: '⚠️ Send Individual Alert',
+          cancelText: 'Cancel',
+          onConfirm: (msg) => {
+            if (msg) dispatchAlert(msg);
+          }
+        });
+      }
     }
+    window.sendIndividualCandidateAlert = sendIndividualCandidateAlert;
+    window.adminSendWarning = function (sid, name, customMsg) {
+      sendIndividualCandidateAlert(sid, customMsg);
+    };
 
     function adminPardonStrike(sid) {
       const roster = getLiveRoster();
-      if (!roster[sid]) return;
-      const s = roster[sid];
-      const prevStrikes = s.violations || s.strikes_count || 0;
+      if (!roster[sid] && (!window.operativesRoster || !window.operativesRoster[sid])) return;
+      const s = roster[sid] || window.operativesRoster[sid];
+      const prevStrikes = s.violations || s.strikes_count || s.strikes || 0;
 
       // UNLOCK TERMINAL & RESET ACTIVE STRIKES TO 0/3
       s.is_locked = false;
+      s.isLocked = false;
       s.violations = 0;
+      s.strikes = 0;
       s.strikes_count = 0;
       s.disqualified = false;
       s.status = 'IN_PROGRESS';
@@ -13558,6 +13702,11 @@
         reason: 'Proctor re-entry authorization granted'
       });
 
+      // Update in-memory operatives roster
+      if (window.operativesRoster && window.operativesRoster[sid]) {
+        window.operativesRoster[sid] = { ...window.operativesRoster[sid], ...s };
+      }
+
       // Synchronize local session if this is the active browser participant
       if (typeof dismissCandidateLockout === 'function' && S && S.sid === sid) {
         dismissCandidateLockout({
@@ -13571,14 +13720,23 @@
       const unlockPayload = {
         event: 'ADMIN_PARDON_UNLOCKED',
         sid: sid,
+        candidateId: sid,
         isLocked: false,
+        is_locked: false,
         strikes: 0,
         prior_strikes: prevStrikes || 3,
         pardoned_at: Date.now(),
         pardoned_by: 'System Admin (2825)',
         ts: Date.now()
       };
+      localStorage.setItem('cyberarena_unlock_events_v1', JSON.stringify(unlockPayload));
       localStorage.setItem(CYBERARENA_UNLOCK_DISPATCH_KEY, JSON.stringify(unlockPayload));
+
+      if (arenaBroadcastBus) {
+        try {
+          arenaBroadcastBus.postMessage({ type: 'CANDIDATE_PARDONED', sid: sid, candidateId: sid, is_locked: false, strikes: 0, ...unlockPayload });
+        } catch (e) { }
+      }
 
       try {
         if (typeof CyberArenaPipeline !== 'undefined') {
@@ -13590,10 +13748,21 @@
         }
       } catch (err) { console.error('[SURVEILLANCE_PIPE_ERROR]: Pardon pipeline error:', err); }
 
-      adminLogSecurityEvent('success', 'PARDON & UNLOCK: System Admin unlocked terminal for ' + s.name + ' and reset active strikes (0/3). Lifetime pardons: ' + s.pardon_history.length);
-      showToast('🔓 Terminal unlocked! Active strikes reset to 0/3 for ' + s.name + '.');
+      // Also post to Google Apps Script / backend if configured
+      if (typeof API_URL !== 'undefined' && API_URL && !API_URL.startsWith('PASTE_')) {
+        try {
+          fetch(API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'pardon', key: (typeof API_KEY !== 'undefined' ? API_KEY : ''), sid: sid, violations: 0, is_locked: false })
+          }).catch(() => {});
+        } catch(e) {}
+      }
 
-      Object.values(roster).forEach(s => { if (!s.audit_sheet) s.audit_sheet = generateParticipantAuditSheet(s); });
+      adminLogSecurityEvent('success', 'PARDON & UNLOCK: System Admin unlocked terminal for ' + (s.name || sid) + ' and reset active strikes (0/3). Lifetime pardons: ' + (s.pardon_history ? s.pardon_history.length : 1));
+      showToast('🔓 Terminal unlocked! Active strikes reset to 0/3 for ' + (s.name || sid) + '.');
+
       saveLiveRoster(roster);
       renderAdminProctorConsole();
     }
@@ -13668,14 +13837,14 @@
             await fetch(`${serverBase}/api/participants/${encodeURIComponent(sid)}`, {
               method: 'DELETE',
               headers: { 'Content-Type': 'application/json' }
-            }).catch(() => {});
+            }).catch(() => { });
           }
 
           // 5. Also sync to Google DB if available
           if (typeof GOOGLE_DATABASE_URL !== 'undefined' && GOOGLE_DATABASE_URL && !GOOGLE_DATABASE_URL.startsWith('PASTE_')) {
             try {
-              fetch(`${GOOGLE_DATABASE_URL}?action=delete&sid=${encodeURIComponent(sid)}`, { mode: 'no-cors' }).catch(() => {});
-            } catch(e) {}
+              fetch(`${GOOGLE_DATABASE_URL}?action=delete&sid=${encodeURIComponent(sid)}`, { mode: 'no-cors' }).catch(() => { });
+            } catch (e) { }
           }
 
           // 6. Refresh UI components immediately without page reload
@@ -13712,32 +13881,68 @@
 
     // Student side: Listen for direct Admin warnings
     function showAdminDirectAlert(text) {
-      const box = $('modalAdminDirectAlert'), txt = $('adminDirectAlertText');
-      if (txt) txt.textContent = text;
+      const box = $('modalAdminDirectAlert');
+      const txt = $('adminDirectAlertText');
+      if (txt) {
+        txt.textContent = text || 'You are switching tabs! Focus on your test.';
+      }
       if (box) {
         isInternalModalOpen = true;
-        box.classList.add('active');
+        setModalVisibility('modalAdminDirectAlert', true);
+      }
+      if (typeof SFX !== 'undefined' && SFX.warn) {
+        try { SFX.warn(); } catch (e) {}
       }
     }
+    window.showAdminDirectAlert = showAdminDirectAlert;
+
     function closeAdminDirectAlertModal() {
       const box = $('modalAdminDirectAlert');
-      if (box) box.classList.remove('active');
+      if (box) {
+        setModalVisibility('modalAdminDirectAlert', false);
+      }
       isInternalModalOpen = false;
     }
+    window.closeAdminDirectAlertModal = closeAdminDirectAlertModal;
+    window.closeAdminDirectAlert = closeAdminDirectAlertModal;
 
+    // Fast Poller for Direct Proctor Alerts
     setInterval(() => {
-      if (!S) return;
+      if (!S || !S.sid) return;
       try {
         const msgs = JSON.parse(localStorage.getItem(ADMIN_DIRECT_MSG_KEY) || '{}');
         if (msgs[S.sid]) {
           const msg = msgs[S.sid];
           delete msgs[S.sid];
           localStorage.setItem(ADMIN_DIRECT_MSG_KEY, JSON.stringify(msgs));
-          SFX.warn();
-          showAdminDirectAlert(msg.text);
+          showAdminDirectAlert(msg.text || msg.message);
         }
       } catch (e) { console.error("[SURVEILLANCE_PIPE_ERROR]:", e); }
-    }, 1500);
+    }, 800);
+
+    // Storage Event Listener for Instant Multi-Tab Direct Alerts
+    window.addEventListener('storage', (e) => {
+      if (!S || !S.sid) return;
+      if (e.key === ADMIN_DIRECT_MSG_KEY && e.newValue) {
+        try {
+          const msgs = JSON.parse(e.newValue || '{}');
+          if (msgs[S.sid]) {
+            const msg = msgs[S.sid];
+            delete msgs[S.sid];
+            localStorage.setItem(ADMIN_DIRECT_MSG_KEY, JSON.stringify(msgs));
+            showAdminDirectAlert(msg.text || msg.message);
+          }
+        } catch (err) {}
+      }
+      if (e.key === 'cyberarena_last_direct_alert' && e.newValue) {
+        try {
+          const alert = JSON.parse(e.newValue);
+          if (alert && (alert.targetSid === S.sid || alert.sid === S.sid)) {
+            showAdminDirectAlert(alert.text || alert.message);
+          }
+        } catch (err) {}
+      }
+    });
 
     /* ============================================================
        WAITING ROOM 50-PT BONUS SYSTEM (10 PTS / WIN, MAX 50 PTS PER GAME)
@@ -13941,9 +14146,9 @@
 
       const tierDesc = isTier2
         ? '• <b>Level 2: Direct Walkthrough</b> instantly reveals explicit, step-by-step guidance directly in your panel.<br>' +
-          '• Deducts 10 points immediately from your Hint Wallet (Zero waiting for admin approval).'
+        '• Deducts 10 points immediately from your Hint Wallet (Zero waiting for admin approval).'
         : '• <b>Level 1: Conceptual Nudge</b> points you in the right direction without revealing the complete solution.<br>' +
-          '• Deducts 10 points immediately from your Hint Wallet (Zero waiting for admin approval).';
+        '• Deducts 10 points immediately from your Hint Wallet (Zero waiting for admin approval).';
 
       pendingClueRequest = { roundName, qId, qLabel, tier: requestedTier };
 
@@ -14071,7 +14276,7 @@
         if (typeof CyberArenaPipeline !== 'undefined' && CyberArenaPipeline.requestClue) {
           CyberArenaPipeline.requestClue(record);
         }
-      } catch (err) {}
+      } catch (err) { }
 
       broadcastParticipantHeartbeat();
       SFX.success();
@@ -14282,7 +14487,7 @@
       showToast('Revoked clue access for ' + r.name + '.');
       renderAdminHintConsole();
     }
-    
+
     function adminEditGrantedHint(idx) {
       const list = getHintRequests();
       const r = list[idx];
@@ -15280,6 +15485,13 @@
         if (originalBusHandler) originalBusHandler(e);
         if (e && e.data && (e.data.type === 'ROUND_FORCE_ADVANCED' || e.data.type === 'ARENA_ROUND_ADVANCED' || e.data.type === 'ROUND_ADVANCED')) {
           handleForceAdvanceRound(e.data);
+        } else if (e && e.data && (e.data.type === 'ADMIN_DIRECT_ALERT' || e.data.type === 'DIRECT_WARNING' || e.data.event === 'DIRECT_WARNING' || e.data.type === 'CANDIDATE_ALERT')) {
+          const targetSid = e.data.targetSid || e.data.sid || e.data.candidateId;
+          if (typeof S !== 'undefined' && S && (S.sid === targetSid || S.candidateId === targetSid)) {
+            if (typeof showAdminDirectAlert === 'function') {
+              showAdminDirectAlert(e.data.text || e.data.message || e.data.alert_message);
+            }
+          }
         } else if (e && e.data && (e.data.type === 'CANDIDATE_DELETED' || e.data.type === 'PARTICIPANT_DELETED')) {
           const deletedSid = e.data.sid || e.data.userId || e.data.candidateId;
           if (typeof S !== 'undefined' && S && (S.sid === deletedSid || S.candidateId === deletedSid)) {
